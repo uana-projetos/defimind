@@ -2,6 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="theme-color" content="#3b9eff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DefiMind">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230d1117'/><text y='.9em' font-size='70' x='15'>🧠</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DefiMind — sua inteligência DeFi em tempo real</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,6 +179,36 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
   .section-header{flex-direction:column;align-items:flex-start;gap:.4rem}
   .btn{font-size:.72rem;padding:6px 10px}
 }
+
+/* ── Loans Module ── */
+.loans-section{margin-top:1.5rem}
+.loan-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:.6rem;transition:border-color .2s}
+.loan-card.hf-safe{border-left:3px solid var(--green)}
+.loan-card.hf-mod{border-left:3px solid #f59e0b}
+.loan-card.hf-warn{border-left:3px solid var(--orange)}
+.loan-card.hf-crit{border-left:3px solid var(--red);animation:pulse-border 1.5s infinite}
+@keyframes pulse-border{0%,100%{border-left-color:var(--red)}50%{border-left-color:#ff000044}}
+.loan-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.loan-protocol{font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:.4rem}
+.loan-protocol .proto-badge{font-size:.65rem;padding:2px 6px;border-radius:4px;background:rgba(59,158,255,.12);color:var(--cyan)}
+.loan-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-top:.4rem}
+.loan-metric{text-align:center}
+.loan-metric .lm-val{font-size:.9rem;font-weight:700;font-family:'JetBrains Mono',monospace}
+.loan-metric .lm-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.hf-pill{font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:12px}
+.hf-pill.safe{background:rgba(52,211,153,.15);color:var(--green)}
+.hf-pill.mod{background:rgba(245,158,11,.15);color:#f59e0b}
+.hf-pill.warn{background:rgba(249,115,22,.15);color:var(--orange)}
+.hf-pill.crit{background:rgba(239,68,68,.2);color:var(--red)}
+.loans-empty{text-align:center;color:var(--muted);font-size:.8rem;padding:1.5rem 0}
+/* PWA install banner */
+#pwa-banner{display:none;position:fixed;bottom:1.2rem;left:1.2rem;right:4.5rem;background:var(--card);border:1px solid var(--cyan);border-radius:10px;padding:.65rem .9rem;z-index:199;box-shadow:0 4px 20px rgba(0,0,0,.4);gap:.6rem;align-items:center}
+#pwa-banner.show{display:flex}
+#pwa-banner .pwa-text{flex:1;font-size:.75rem;color:var(--text);line-height:1.4}
+#pwa-banner .pwa-text strong{color:var(--cyan)}
+/* footer version */
+footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5rem}
+
 </style>
 </head>
 <body>
@@ -193,15 +230,23 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 <div class="notif-bar" id="notifBar"></div>
 <div id="dashSection"></div>
 <div id="myPoolsSection"></div>
+<div id="loansSection"></div>
 <div id="simSection"></div>
 <div id="sections"></div>
+
+<div id="pwa-banner">
+  <span style="font-size:1.3rem">🧠</span>
+  <div class="pwa-text"><strong>Instalar DefiMind</strong><br>Adicione à tela inicial e use offline</div>
+  <button onclick="installPWA()" class="btn" style="font-size:.72rem;padding:5px 10px;flex-shrink:0">Instalar</button>
+  <button onclick="dismissPWA()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:2px 4px">&times;</button>
+</div>
 <div class="panel-overlay" id="overlay"></div>
 <div class="panel" id="panel">
 <button class="panel-close" id="panelClose">&times;</button>
 <div id="panelContent"></div>
 </div>
 <footer>
-Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<br>
+Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<span class="version-tag">v1.1.0</span><br>
 Este painel é informativo. Não constitui recomendação financeira. Verifique os riscos de impermanent loss antes de fornecer liquidez.
 </footer>
 </div>
@@ -2875,6 +2920,304 @@ function doCopy(text, btnId, okLabel, defLabel) {
     if (b) { b.textContent = okLabel; setTimeout(() => b.textContent = defLabel, 2200); }
   });
 }
+
+
+// ══════════════════════════════════════════════════════════
+// ── LOANS MODULE (Aave / Morpho / Hyperlend / Fluid / Compound)
+// ══════════════════════════════════════════════════════════
+const LOAN_PROTOCOLS = [
+  {name:'Aave v3',   icon:'🏛', chains:['Ethereum','Arbitrum','Base','Optimism','Polygon'], defaultLT:80},
+  {name:'Morpho',    icon:'🔵', chains:['Ethereum','Base'], defaultLT:86},
+  {name:'Hyperlend', icon:'⚡', chains:['Hyperliquid'], defaultLT:75},
+  {name:'Fluid',     icon:'💧', chains:['Ethereum','Arbitrum'], defaultLT:85},
+  {name:'Compound v3',icon:'🏗', chains:['Ethereum','Base','Arbitrum'], defaultLT:83},
+  {name:'Spark',     icon:'✨', chains:['Ethereum'], defaultLT:77},
+];
+
+function getLoans() { try { return JSON.parse(localStorage.getItem('defiLoans')||'[]'); } catch { return []; } }
+function saveLoans(l) { localStorage.setItem('defiLoans', JSON.stringify(l)); }
+
+function calcHF(colUSD, ltPct, debtUSD) {
+  if (!debtUSD || debtUSD <= 0) return 999;
+  return (colUSD * (ltPct / 100)) / debtUSD;
+}
+function hfClass(hf) {
+  if (hf >= 2.0) return 'safe';
+  if (hf >= 1.5) return 'mod';
+  if (hf >= 1.2) return 'warn';
+  return 'crit';
+}
+function hfLabel(hf) {
+  if (hf >= 999) return '∞';
+  return hf.toFixed(2);
+}
+function hfCardClass(hf) {
+  const c = hfClass(hf);
+  return {safe:'hf-safe', mod:'hf-mod', warn:'hf-warn', crit:'hf-crit'}[c];
+}
+
+function renderLoans() {
+  const loans = getLoans();
+  const el = document.getElementById('loansSection');
+  if (!el) return;
+
+  let html = `<div class="loans-section">
+    <div class="my-pools-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2 style="font-size:1rem;font-weight:600;display:flex;align-items:center;gap:.5rem">
+        💸 Meus Empréstimos DeFi
+        <span style="font-size:.7rem;color:var(--muted);font-weight:400">(${loans.length})</span>
+      </h2>
+      <button class="btn" onclick="openLoanModal()" style="font-size:.75rem;padding:5px 12px">+ Adicionar</button>
+    </div>`;
+
+  if (!loans.length) {
+    html += `<div class="loans-empty">
+      <div style="font-size:2rem;margin-bottom:.5rem">💸</div>
+      <div>Nenhum empréstimo cadastrado.</div>
+      <div style="margin-top:.3rem;font-size:.72rem">Monitore saúde de posições em Aave, Morpho, Hyperlend e mais.</div>
+    </div>`;
+  } else {
+    loans.forEach((loan, idx) => {
+      const hf = calcHF(loan.col_usd, loan.lt_pct, loan.debt_usd);
+      const cls = hfCardClass(hf);
+      const pc = hfClass(hf);
+      const liqPrice = loan.liq_price ? fmtPrice(loan.liq_price) : '—';
+      const proto = LOAN_PROTOCOLS.find(p => p.name === loan.protocol) || {icon:'📄'};
+      html += `<div class="loan-card ${cls}">
+        <div class="loan-header">
+          <div class="loan-protocol">
+            ${proto.icon} ${loan.protocol}
+            <span class="proto-badge">${loan.chain}</span>
+            ${loan.objective ? `<span class="proto-badge" style="background:rgba(139,92,246,.12);color:var(--purple)">${loan.objective}</span>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <span class="hf-pill ${pc}">HF ${hfLabel(hf)}</span>
+            <button class="btn btn-sm" onclick="editLoan(${idx})" style="padding:3px 8px;font-size:.65rem">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="removeLoan(${idx})" style="padding:3px 8px;font-size:.65rem">✕</button>
+          </div>
+        </div>
+        <div class="loan-metrics">
+          <div class="loan-metric">
+            <div class="lm-val" style="color:var(--green)">$${fmtNum(loan.col_usd)}</div>
+            <div class="lm-lbl">Colateral (${loan.col_asset||'—'})</div>
+          </div>
+          <div class="loan-metric">
+            <div class="lm-val" style="color:var(--red)">$${fmtNum(loan.debt_usd)}</div>
+            <div class="lm-lbl">Dívida (${loan.debt_asset||'—'})</div>
+          </div>
+          <div class="loan-metric">
+            <div class="lm-val" style="color:var(--muted)">${loan.lt_pct}%</div>
+            <div class="lm-lbl">LT</div>
+          </div>
+          <div class="loan-metric">
+            <div class="lm-val" style="color:var(--orange)">${liqPrice}</div>
+            <div class="lm-lbl">Liq. Price</div>
+          </div>
+        </div>
+        ${hf < 1.5 ? `<div class="note" style="margin-top:.5rem;border-color:${hf<1.2?'var(--red)':'var(--orange)'};color:${hf<1.2?'var(--red)':'var(--orange)'}">
+          ${hf<1.2?'🚨 PERIGO: Health Factor crítico! Risco iminente de liquidação. Reduza dívida ou adicione colateral AGORA.':'⚠️ Health Factor baixo. Monitore de perto e considere reduzir exposição.'}
+        </div>` : ''}
+      </div>`;
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function openLoanModal(editIdx) {
+  const loans = getLoans();
+  const loan = editIdx !== undefined ? loans[editIdx] : null;
+  const isEdit = loan !== null && loan !== undefined;
+
+  const protoOptions = LOAN_PROTOCOLS.map(p =>
+    `<option value="${p.name}" ${loan?.protocol===p.name?'selected':''}>${p.icon} ${p.name}</option>`
+  ).join('');
+
+  const html = `<div class="modal" style="width:min(480px,95vw);max-width:95vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem">
+      <h3 style="color:var(--cyan);font-size:1rem;margin:0">💸 ${isEdit?'Editar':'Adicionar'} Empréstimo DeFi</h3>
+      <button onclick="closeModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.3rem">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem">
+      <div style="grid-column:1/-1">
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Protocolo</label>
+        <select id="lm-proto" onchange="updateLoanChains()" style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem">
+          ${protoOptions}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Rede</label>
+        <select id="lm-chain" style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem">
+          <option value="${loan?.chain||''}">${loan?.chain||'Selecione protocolo'}</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Objetivo</label>
+        <select id="lm-obj" style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem">
+          <option value="leverage" ${loan?.objective==='leverage'?'selected':''}>📈 Leverage</option>
+          <option value="yield" ${loan?.objective==='yield'?'selected':''}>🌾 Yield</option>
+          <option value="proteção" ${loan?.objective==='proteção'?'selected':''}>🛡 Proteção</option>
+          <option value="liquidez" ${loan?.objective==='liquidez'?'selected':''}>💧 Liquidez</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Ativo Colateral</label>
+        <input id="lm-col-asset" type="text" value="${loan?.col_asset||''}" placeholder="ex: WETH, wstETH, BTC"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Colateral (USD)</label>
+        <input id="lm-col-usd" type="number" value="${loan?.col_usd||''}" placeholder="ex: 5000" oninput="calcLoanHF()"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Ativo Emprestado</label>
+        <input id="lm-debt-asset" type="text" value="${loan?.debt_asset||''}" placeholder="ex: USDC, USDT, DAI"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Dívida (USD)</label>
+        <input id="lm-debt-usd" type="number" value="${loan?.debt_usd||''}" placeholder="ex: 3000" oninput="calcLoanHF()"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Liquidation Threshold (%)</label>
+        <input id="lm-lt" type="number" value="${loan?.lt_pct||80}" min="50" max="99" oninput="calcLoanHF()"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);display:block;margin-bottom:.25rem">Preço de Liquidação (opcional)</label>
+        <input id="lm-liq-price" type="number" value="${loan?.liq_price||''}" placeholder="ex: 1800"
+          style="width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:.82rem;box-sizing:border-box">
+      </div>
+    </div>
+    <div id="lm-hf-preview" style="margin-top:.75rem;padding:.6rem;background:rgba(59,158,255,.06);border:1px solid var(--border);border-radius:6px;font-size:.78rem;display:none;text-align:center"></div>
+    <div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLoan(${isEdit?editIdx:'undefined'})">${isEdit?'Salvar':'Adicionar'}</button>
+    </div>
+  </div>`;
+
+  openModal(html);
+  setTimeout(() => { updateLoanChains(); calcLoanHF(); }, 50);
+  if (loan?.chain) setTimeout(() => {
+    const sel = document.getElementById('lm-chain');
+    if (sel) Array.from(sel.options).forEach(o => { if (o.value === loan.chain) o.selected = true; });
+  }, 100);
+}
+
+function updateLoanChains() {
+  const proto = document.getElementById('lm-proto')?.value;
+  const p = LOAN_PROTOCOLS.find(x => x.name === proto);
+  const sel = document.getElementById('lm-chain');
+  const lt = document.getElementById('lm-lt');
+  if (!sel || !p) return;
+  sel.innerHTML = p.chains.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (lt && !lt._userEdited) lt.value = p.defaultLT;
+}
+
+function calcLoanHF() {
+  const col = parseFloat(document.getElementById('lm-col-usd')?.value)||0;
+  const debt = parseFloat(document.getElementById('lm-debt-usd')?.value)||0;
+  const lt = parseFloat(document.getElementById('lm-lt')?.value)||80;
+  const prev = document.getElementById('lm-hf-preview');
+  if (!prev) return;
+  if (!col || !debt) { prev.style.display='none'; return; }
+  const hf = calcHF(col, lt, debt);
+  const pc = hfClass(hf);
+  const colors = {safe:'var(--green)',mod:'#f59e0b',warn:'var(--orange)',crit:'var(--red)'};
+  const labels = {safe:'✅ Saudável',mod:'⚠️ Moderado',warn:'🔶 Atenção',crit:'🚨 Crítico'};
+  prev.style.display = 'block';
+  prev.style.borderColor = colors[pc];
+  prev.innerHTML = `<strong style="color:${colors[pc]}">Health Factor: ${hfLabel(hf)}</strong> — ${labels[pc]}<br>
+    <span style="color:var(--muted);font-size:.7rem">Colateral efetivo: $${fmtNum(col * lt/100)} | Dívida: $${fmtNum(debt)} | Margem: $${fmtNum(col * lt/100 - debt)}</span>`;
+}
+
+function saveLoan(editIdx) {
+  const proto = document.getElementById('lm-proto')?.value;
+  const chain = document.getElementById('lm-chain')?.value;
+  const colAsset = document.getElementById('lm-col-asset')?.value.trim();
+  const colUsd = parseFloat(document.getElementById('lm-col-usd')?.value)||0;
+  const debtAsset = document.getElementById('lm-debt-asset')?.value.trim();
+  const debtUsd = parseFloat(document.getElementById('lm-debt-usd')?.value)||0;
+  const ltPct = parseFloat(document.getElementById('lm-lt')?.value)||80;
+  const liqPrice = parseFloat(document.getElementById('lm-liq-price')?.value)||0;
+  const obj = document.getElementById('lm-obj')?.value;
+
+  if (!proto || !colUsd || !debtUsd) { alert('Preencha protocolo, colateral e dívida.'); return; }
+
+  const loan = {protocol:proto, chain, col_asset:colAsset, col_usd:colUsd, debt_asset:debtAsset, debt_usd:debtUsd, lt_pct:ltPct, liq_price:liqPrice||null, objective:obj, added_at:Date.now()};
+  const loans = getLoans();
+  if (editIdx !== undefined && editIdx !== 'undefined') loans[editIdx] = loan;
+  else loans.push(loan);
+  saveLoans(loans);
+  closeModal();
+  renderLoans();
+  checkLoanAlerts();
+}
+
+function removeLoan(idx) {
+  const loans = getLoans();
+  loans.splice(idx, 1);
+  saveLoans(loans);
+  renderLoans();
+}
+
+function editLoan(idx) { openLoanModal(idx); }
+
+function checkLoanAlerts() {
+  const loans = getLoans();
+  loans.forEach(loan => {
+    const hf = calcHF(loan.col_usd, loan.lt_pct, loan.debt_usd);
+    if (hf < 1.2) {
+      pushNotification('DefiMind 🚨 Liquidação Iminente', `${loan.protocol} (${loan.chain}): HF ${hfLabel(hf)} — AÇÃO URGENTE`, 'loan_crit_'+loan.protocol);
+    } else if (hf < 1.5) {
+      pushNotification('DefiMind ⚠️ Empréstimo em Risco', `${loan.protocol} (${loan.chain}): HF ${hfLabel(hf)} — monitore`, 'loan_warn_'+loan.protocol);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// ── PWA Install
+// ══════════════════════════════════════════════════════════
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  const dismissed = localStorage.getItem('pwa_dismissed');
+  if (!dismissed) {
+    setTimeout(() => {
+      const b = document.getElementById('pwa-banner');
+      if (b) b.classList.add('show');
+    }, 3000);
+  }
+});
+function installPWA() {
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(() => { _pwaPrompt = null; dismissPWA(); });
+  }
+}
+function dismissPWA() {
+  localStorage.setItem('pwa_dismissed', '1');
+  const b = document.getElementById('pwa-banner');
+  if (b) b.classList.remove('show');
+}
+
+// ── Init loans on load
+renderLoans();
+checkLoanAlerts();
+
+
+// ── Service Worker (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/monitor-pools/sw.js')
+      .then(r => console.log('[DefiMind] SW registered:', r.scope))
+      .catch(e => console.log('[DefiMind] SW error:', e));
+  });
+}
+
 </script>
 
 <button id="donate-btn" onclick="openDonateModal()" title="Apoiar Uaná Lee"
