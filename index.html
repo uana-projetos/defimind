@@ -183,6 +183,11 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 </div>
 <div class="controls">
 <label class="toggle"><input type="checkbox" id="topToggle" checked> Top 10 por ativo</label>
+<button id="alert-bell" onclick="openAlertsPanel()" title="Alertas das suas pools"
+  style="position:relative;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:.3rem;transition:border-color .2s">
+  🔔 <span id="alert-bell-label" style="font-size:.72rem">Alertas</span>
+  <span id="alert-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border-radius:50%;width:17px;height:17px;font-size:.6rem;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1">0</span>
+</button>
 </div>
 </header>
 <div class="notif-bar" id="notifBar"></div>
@@ -2589,122 +2594,289 @@ renderDashboard();
 renderSimulator();
 renderMyPools();
 
+// ══════════════════════════════════════════════════════════════════
+// SISTEMA DE ALERTAS INTELIGENTES — objetivo-aware
+// ══════════════════════════════════════════════════════════════════
+
+// Armazena quais alertas já foram notificados (evita spam)
+const _notifiedAlerts = new Set();
+
+// Pede permissão de notificação do browser (discretamente, na primeira interação)
+function initNotifications() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    // Pede permissão apenas se o usuário já tem pools cadastradas
+    if (getMyPools().length > 0) {
+      Notification.requestPermission();
+    }
+  }
+}
+
+// Dispara push notification do browser
+function pushNotification(title, body, tag) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    if (_notifiedAlerts.has(tag)) return; // já notificou
+    _notifiedAlerts.add(tag);
+    new Notification(title, { body, tag, icon: '' });
+    // Limpa o cache depois de 10min para renotificar se persistir
+    setTimeout(() => _notifiedAlerts.delete(tag), 600000);
+  }
+}
+
+// ── Lógica por objetivo ───────────────────────────────────────────
+function getObjectiveAdvice(pool, health, price) {
+  const obj = pool.objective || 'fees';
+  const pct = health.pct || 0; // distância percentual da borda
+  const isOut = health.status === 'OUT';
+  const isWarn = health.status === 'WARNING';
+  const priceAbove = price > pool.rangeHigh;
+  const priceBelow = price < pool.rangeLow;
+  const timeOutKey = 'pool_out_time_' + pool.symbol;
+  const minutesOut = isOut ? Math.round((Date.now() - (parseInt(localStorage.getItem(timeOutKey)) || Date.now())) / 60000) : 0;
+  if (isOut && !localStorage.getItem(timeOutKey)) localStorage.setItem(timeOutKey, Date.now());
+  if (!isOut) localStorage.removeItem(timeOutKey);
+
+  // ── FEES: qualquer saída é problema
+  if (obj === 'fees') {
+    if (isOut) {
+      const urgency = minutesOut > 60 ? 'high' : 'medium';
+      return {
+        urgency, icon: '💰',
+        title: urgency === 'high' ? 'Remontar urgente — perdendo fees' : 'Fora do range — sem fees',
+        body: minutesOut > 60
+          ? `Fora há ${minutesOut}min. Remonte centrado no preço atual.`
+          : `Preço saiu do range. Remontar vale mais que o custo de gas.`,
+        action: 'remount', actionLabel: '🔧 Remontar — escolher perfil',
+        secondaryAction: null
+      };
+    }
+    if (isWarn) return { urgency:'low', icon:'⚠️', title:'Borda do range — atenção', body:`${Math.round(pct)}% da borda. Prepare-se para remontar.`, action:'watch', actionLabel:'Monitorar' };
+  }
+
+  // ── DCA COMPRA: preço abaixo = objetivo atingindo
+  if (obj === 'dca_buy') {
+    if (isOut && priceBelow) return {
+      urgency:'info', icon:'🟢',
+      title:'DCA em andamento — posição 100% no ativo',
+      body:'Preço caiu abaixo do range. Posição converteu. Se atingiu o alvo, retire. Se quiser continuar, remonte abaixo.',
+      action:'choice',
+      actionLabel:'↓ Remontar abaixo — continuar DCA',
+      secondaryAction:'✓ Retirar — DCA completo'
+    };
+    if (isOut && priceAbove) return {
+      urgency:'medium', icon:'⚠️',
+      title:'Acima do range — sem compra',
+      body:'Preço subiu além do seu range de compra. Posição em stablecoin.',
+      action:'remount', actionLabel:'↑ Remontar acima do preço'
+    };
+  }
+
+  // ── DCA VENDA: preço acima = objetivo atingindo
+  if (obj === 'dca_sell') {
+    if (isOut && priceAbove) return {
+      urgency:'info', icon:'🔴',
+      title:'DCA Venda concluído — posição 100% stablecoin',
+      body:'Preço subiu além do range. Venda realizada com sucesso.',
+      action:'choice',
+      actionLabel:'↑ Remontar acima — continuar vendendo',
+      secondaryAction:'✓ Retirar — lucro realizado'
+    };
+    if (isOut && priceBelow) return {
+      urgency:'medium', icon:'⚠️',
+      title:'Abaixo do range — voltou ao ativo',
+      body:'Preço caiu. Posição voltou pro ativo. Remonte se ainda quer vender.',
+      action:'remount', actionLabel:'🔧 Remontar centrado'
+    };
+  }
+
+  // ── HOLD / YIELD: lógica de esperar vs remontar
+  if (obj === 'hold' || obj === 'yield' || obj === 'accumulate') {
+    if (isOut) {
+      const distPct = priceBelow
+        ? Math.abs((pool.rangeLow - price) / pool.rangeLow * 100)
+        : Math.abs((price - pool.rangeHigh) / pool.rangeHigh * 100);
+      const waitThreshold = obj === 'hold' ? 5 : 10; // hold é mais conservador
+      if (distPct < waitThreshold && minutesOut < 120) {
+        return {
+          urgency:'low', icon:'⏳',
+          title:`Fora do range — ${distPct.toFixed(1)}% — aguardar`,
+          body:`Saída pequena há ${minutesOut}min. Custo de remontar supera o ganho. Aviso se piorar.`,
+          action:'watch', actionLabel:'⏳ Aguardar — avisar se piorar',
+          secondaryAction:'🔧 Remontar mesmo assim'
+        };
+      }
+      return {
+        urgency:'medium', icon:'🔧',
+        title:`Fora há ${minutesOut}min — vale remontar`,
+        body:`Distância de ${distPct.toFixed(1)}%. Tempo fora já justifica remontagem.`,
+        action:'remount', actionLabel:'🔧 Remontar — escolher perfil'
+      };
+    }
+    if (isWarn) return {
+      urgency:'low', icon:'⚠️',
+      title:'Próximo da borda',
+      body:`${Math.round(pct)}% da borda do range. Monitorando.`,
+      action:'watch', actionLabel:'Ok'
+    };
+  }
+
+  return null;
+}
+
+// ── Verifica todas as pools e atualiza o sino ─────────────────────
+function checkPoolAlerts() {
+  const pools = getMyPools();
+  const alerts = [];
+  pools.forEach((p, idx) => {
+    const price = getPoolPrice(p);
+    if (!price) return;
+    const health = rangeHealth(price, p.rangeLow, p.rangeHigh);
+    if (health.status === 'OK') return;
+    const advice = getObjectiveAdvice(p, health, price);
+    if (!advice) return;
+    alerts.push({ pool: p, idx, price, health, advice });
+    if (advice.urgency === 'high' || advice.urgency === 'medium') {
+      pushNotification('Monitor de Pools — ' + p.symbol, advice.title, 'pool_' + p.symbol + '_' + health.status);
+    }
+  });
+  updateBell(alerts);
+  return alerts;
+}
+
+// ── Atualiza o sino no header ─────────────────────────────────────
+function updateBell(alerts) {
+  const badge = document.getElementById('alert-badge');
+  const bell  = document.getElementById('alert-bell');
+  const label = document.getElementById('alert-bell-label');
+  if (!badge || !bell) return;
+  const critical = alerts.filter(a => a.advice.urgency === 'high' || a.advice.urgency === 'medium');
+  const count = critical.length;
+  if (count > 0) {
+    badge.style.display = 'flex'; badge.textContent = count; badge.style.background = 'var(--red)';
+    bell.style.borderColor = 'var(--red)'; bell.style.color = 'var(--red)';
+    if (label) label.textContent = count + ' alerta' + (count > 1 ? 's' : '');
+  } else if (alerts.length > 0) {
+    badge.style.display = 'flex'; badge.textContent = alerts.length; badge.style.background = 'var(--orange)';
+    bell.style.borderColor = 'var(--orange)'; bell.style.color = 'var(--orange)';
+    if (label) label.textContent = alerts.length + ' aviso' + (alerts.length > 1 ? 's' : '');
+  } else {
+    badge.style.display = 'none';
+    bell.style.borderColor = 'var(--border)'; bell.style.color = 'var(--muted)';
+    if (label) label.textContent = 'Alertas';
+  }
+}
+
+// ── Abre painel de alertas (usa painel existente do app) ──────────
+function openAlertsPanel() {
+  initNotifications();
+  const alerts = checkPoolAlerts();
+  const panel   = document.getElementById('panel');
+  const overlay = document.getElementById('overlay');
+  const content = document.getElementById('panelContent');
+  if (!panel || !content) return;
+  const fp = v => (v == null || isNaN(v)) ? '—' : (v < 0.01 ? v.toPrecision(4) : v >= 1000 ? v.toLocaleString('en',{maximumFractionDigits:2}) : v.toFixed(v >= 100 ? 0 : 2));
+  const urgColor = { high:'var(--red)', medium:'var(--orange)', low:'var(--cyan)', info:'var(--green)' };
+  const urgBg    = { high:'rgba(239,68,68,.08)', medium:'rgba(245,158,11,.08)', low:'rgba(59,158,255,.08)', info:'rgba(52,211,153,.08)' };
+  if (alerts.length === 0) {
+    content.innerHTML = `<h2>🔔 Alertas</h2><div style="margin-top:3rem;text-align:center;color:var(--muted)"><div style="font-size:2rem;margin-bottom:.75rem">✅</div><div style="font-size:.85rem">Todas as pools estão dentro do range.</div><div style="font-size:.72rem;margin-top:.35rem">Atualizado a cada minuto.</div></div>`;
+  } else {
+    let html = `<h2>🔔 Alertas <span style="font-size:.72rem;color:var(--muted);font-weight:400">(${alerts.length})</span></h2><p style="font-size:.72rem;color:var(--muted);margin-bottom:1.25rem">Sugestões baseadas no objetivo de cada pool.</p>`;
+    alerts.forEach(({ pool, idx, price, health, advice }) => {
+      const col = urgColor[advice.urgency] || 'var(--muted)';
+      const bg  = urgBg[advice.urgency]    || 'transparent';
+      html += `<div style="background:${bg};border:1px solid ${col};border-radius:8px;padding:.85rem 1rem;margin-bottom:.85rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+          <span style="font-size:.78rem;font-weight:600;color:${col}">${advice.icon} ${pool.symbol}</span>
+          <span style="font-size:.62rem;color:var(--muted)">${pool.protocol||''}</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--text);font-weight:500;margin-bottom:.2rem">${advice.title}</div>
+        <div style="font-size:.68rem;color:var(--muted);margin-bottom:.55rem;line-height:1.4">${advice.body}</div>
+        <div style="font-size:.62rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:.6rem">Preço: <span style="color:var(--cyan)">${fp(price)}</span> &nbsp;|&nbsp; Range: ${fp(pool.rangeLow)} – ${fp(pool.rangeHigh)}</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          ${advice.action === 'remount' || advice.action === 'choice'
+            ? `<button class="btn btn-sm" style="font-size:.68rem;border-color:${col};color:${col}" onclick="closePanel();openAddModal()">${advice.actionLabel}</button>`
+            : `<button class="btn btn-sm" style="font-size:.68rem" onclick="this.parentElement.parentElement.style.opacity='.4'">${advice.actionLabel}</button>`}
+          ${advice.secondaryAction ? `<button class="btn btn-sm" style="font-size:.68rem" onclick="this.parentElement.parentElement.style.opacity='.4'">${advice.secondaryAction}</button>` : ''}
+        </div>
+      </div>`;
+    });
+    content.innerHTML = html;
+  }
+  panel.classList.add('open'); overlay.classList.add('open'); overlay.onclick = closePanel;
+}
+
+function closePanel() {
+  const p = document.getElementById('panel'), o = document.getElementById('overlay');
+  if (p) p.classList.remove('open');
+  if (o) { o.classList.remove('open'); o.onclick = null; }
+}
+document.getElementById('panelClose')?.addEventListener('click', closePanel);
+setTimeout(() => { checkPoolAlerts(); initNotifications(); }, 2000);
+
 // ── PIX: gerador de payload EMV estático ─────────────────────────
 function _crc16Pix(str) {
   let crc = 0xFFFF;
   for (let i = 0; i < str.length; i++) {
     crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-      crc &= 0xFFFF;
-    }
+    for (let j = 0; j < 8; j++) { crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1); crc &= 0xFFFF; }
   }
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 function gerarPixPayload(chave, nome, cidade) {
   const f = (id, v) => id + String(v.length).padStart(2,'0') + v;
   const mai = f('26', f('00','BR.GOV.BCB.PIX') + f('01', chave));
-  let p = f('00','01') + mai + f('52','0000') + f('53','986') + f('58','BR')
-        + f('59', nome.substring(0,25).padEnd(1)) + f('60', cidade.substring(0,15)) + f('62', f('05','***')) + '6304';
+  let p = f('00','01') + mai + f('52','0000') + f('53','986') + f('58','BR') + f('59', nome.substring(0,25)) + f('60', cidade.substring(0,15)) + f('62', f('05','***')) + '6304';
   return p + _crc16Pix(p);
 }
 
-// ── Modal Apoiar Desenvolvedor ───────────────────────────────────
+// ── Modal Apoiar Desenvolvedor ────────────────────────────────────
 function openDonateModal() {
   if (document.getElementById('donateModal')) return;
   const modal = document.createElement('div');
-  modal.className = 'modal-bg';
-  modal.id = 'donateModal';
-  modal.innerHTML = `
-  <div class="modal" style="width:340px;text-align:center">
+  modal.className = 'modal-bg'; modal.id = 'donateModal';
+  modal.innerHTML = `<div class="modal" style="width:340px;text-align:center">
     <div style="font-size:1.6rem;margin-bottom:.35rem">☕</div>
     <h3 style="color:var(--cyan);margin-bottom:.2rem;font-size:1rem">Apoiar o Desenvolvedor</h3>
     <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem">Desenvolvido por <strong style="color:var(--text)">Uaná Lee</strong><br>Se o app te ajudou, considere apoiar 🙏</p>
-
-    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem;gap:0">
-      <button id="dtab-pix" onclick="switchDonateTab('pix')"
-        style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid var(--green);color:var(--green);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif;font-weight:600">
-        PIX 🇧🇷
-      </button>
-      <button id="dtab-crypto" onclick="switchDonateTab('crypto')"
-        style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">
-        Crypto ⛓
-      </button>
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem">
+      <button id="dtab-pix" onclick="switchDonateTab('pix')" style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid var(--green);color:var(--green);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif;font-weight:600">PIX 🇧🇷</button>
+      <button id="dtab-crypto" onclick="switchDonateTab('crypto')" style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">Crypto ⛓</button>
     </div>
-
     <div id="dpanel-pix">
       <div id="dqr-pix" style="display:flex;justify-content:center;margin:.25rem 0 .6rem;min-height:164px"></div>
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.55rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text);margin-bottom:.6rem">
-        19.009.647/0001-02
-      </div>
-      <button id="dbtn-pix" onclick="doCopy('19009647000102','dbtn-pix','✓ Chave copiada!','📋 Copiar Chave PIX')"
-        style="width:100%;padding:.6rem;background:rgba(52,211,153,.1);border:1px solid var(--green);border-radius:6px;color:var(--green);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">
-        📋 Copiar Chave PIX
-      </button>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.55rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text);margin-bottom:.6rem">19.009.647/0001-02</div>
+      <button id="dbtn-pix" onclick="doCopy('19009647000102','dbtn-pix','✓ Chave copiada!','📋 Copiar Chave PIX')" style="width:100%;padding:.6rem;background:rgba(52,211,153,.1);border:1px solid var(--green);border-radius:6px;color:var(--green);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">📋 Copiar Chave PIX</button>
     </div>
-
     <div id="dpanel-crypto" style="display:none">
       <div id="dqr-crypto" style="display:flex;justify-content:center;margin:.25rem 0 .6rem;min-height:164px"></div>
       <div style="font-size:.6rem;color:var(--muted);margin-bottom:.25rem">ETH · USDC · USDT · qualquer EVM</div>
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.55rem;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text);word-break:break-all;margin-bottom:.6rem">
-        0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3
-      </div>
-      <button id="dbtn-crypto" onclick="doCopy('0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3','dbtn-crypto','✓ Endereço copiado!','📋 Copiar Endereço')"
-        style="width:100%;padding:.6rem;background:rgba(167,139,250,.1);border:1px solid var(--purple);border-radius:6px;color:var(--purple);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">
-        📋 Copiar Endereço
-      </button>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.55rem;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text);word-break:break-all;margin-bottom:.6rem">0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3</div>
+      <button id="dbtn-crypto" onclick="doCopy('0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3','dbtn-crypto','✓ Endereço copiado!','📋 Copiar Endereço')" style="width:100%;padding:.6rem;background:rgba(167,139,250,.1);border:1px solid var(--purple);border-radius:6px;color:var(--purple);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">📋 Copiar Endereço</button>
     </div>
-
-    <button onclick="document.getElementById('donateModal').remove()"
-      style="width:100%;margin-top:.85rem;padding:.5rem;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.7rem;font-family:'Inter',sans-serif">
-      Fechar
-    </button>
+    <button onclick="document.getElementById('donateModal').remove()" style="width:100%;margin-top:.85rem;padding:.5rem;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.7rem;font-family:'Inter',sans-serif">Fechar</button>
   </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-  // Gera QR codes após render
   setTimeout(() => {
-    try {
-      const pixPayload = gerarPixPayload('19009647000102','Uana Lee','SAO PAULO');
-      new QRCode(document.getElementById('dqr-pix'), {
-        text: pixPayload, width:160, height:160,
-        colorDark:'#e2e8f0', colorLight:'#12151c',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    } catch(e) {
-      document.getElementById('dqr-pix').innerHTML = '<span style="font-size:.65rem;color:var(--muted)">QR indisponível</span>';
-    }
-    try {
-      new QRCode(document.getElementById('dqr-crypto'), {
-        text:'0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3', width:160, height:160,
-        colorDark:'#e2e8f0', colorLight:'#12151c',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    } catch(e) {
-      document.getElementById('dqr-crypto').innerHTML = '<span style="font-size:.65rem;color:var(--muted)">QR indisponível</span>';
-    }
+    try { new QRCode(document.getElementById('dqr-pix'), { text: gerarPixPayload('19009647000102','Uana Lee','SAO PAULO'), width:160, height:160, colorDark:'#e2e8f0', colorLight:'#12151c', correctLevel: QRCode.CorrectLevel.M }); } catch(e) { document.getElementById('dqr-pix').innerHTML='<span style="font-size:.65rem;color:var(--muted)">QR indisponível</span>'; }
+    try { new QRCode(document.getElementById('dqr-crypto'), { text:'0x3bF1Fc9acb88d739c374A00F1d4dD055f07347F3', width:160, height:160, colorDark:'#e2e8f0', colorLight:'#12151c', correctLevel: QRCode.CorrectLevel.M }); } catch(e) { document.getElementById('dqr-crypto').innerHTML='<span style="font-size:.65rem;color:var(--muted)">QR indisponível</span>'; }
   }, 80);
 }
-
 function switchDonateTab(tab) {
-  document.getElementById('dpanel-pix').style.display    = tab === 'pix'    ? 'block' : 'none';
-  document.getElementById('dpanel-crypto').style.display = tab === 'crypto' ? 'block' : 'none';
-  document.getElementById('dtab-pix').style.borderBottomColor    = tab === 'pix'    ? 'var(--green)'  : 'transparent';
-  document.getElementById('dtab-pix').style.color                = tab === 'pix'    ? 'var(--green)'  : 'var(--muted)';
-  document.getElementById('dtab-crypto').style.borderBottomColor = tab === 'crypto' ? 'var(--purple)' : 'transparent';
-  document.getElementById('dtab-crypto').style.color             = tab === 'crypto' ? 'var(--purple)' : 'var(--muted)';
+  document.getElementById('dpanel-pix').style.display    = tab==='pix'    ? 'block':'none';
+  document.getElementById('dpanel-crypto').style.display = tab==='crypto' ? 'block':'none';
+  document.getElementById('dtab-pix').style.borderBottomColor    = tab==='pix'    ? 'var(--green)' :'transparent';
+  document.getElementById('dtab-pix').style.color                = tab==='pix'    ? 'var(--green)' :'var(--muted)';
+  document.getElementById('dtab-crypto').style.borderBottomColor = tab==='crypto' ? 'var(--purple)':'transparent';
+  document.getElementById('dtab-crypto').style.color             = tab==='crypto' ? 'var(--purple)':'var(--muted)';
 }
-
-function doCopy(text, btnId, successLabel, defaultLabel) {
+function doCopy(text, btnId, okLabel, defLabel) {
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById(btnId);
-    if (btn) { btn.textContent = successLabel; setTimeout(() => btn.textContent = defaultLabel, 2000); }
+    const b = document.getElementById(btnId);
+    if (b) { b.textContent = okLabel; setTimeout(() => b.textContent = defLabel, 2200); }
   });
 }
 </script>
 
-<!-- Botão flutuante: Apoiar Desenvolvedor -->
 <button id="donate-btn" onclick="openDonateModal()" title="Apoiar Uaná Lee"
   style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:200;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1.15rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:transform .18s"
   onmouseover="this.style.transform='scale(1.12)'"
