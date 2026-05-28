@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monitor de Pools de Liquidez Concentrada</title>
+<title>DefiMind — sua inteligência DeFi em tempo real</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -178,7 +178,7 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 <div id="app">
 <header>
 <div>
-<h1><span>&#9679;</span> Monitor de Pools — Liquidez Concentrada</h1>
+<h1><span>&#9679;</span> DefiMind <span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-left:.3rem">sua inteligência DeFi</span></h1>
 <p class="timestamp">Atualizado: 2026-05-09 | Fonte: DefiLlama + Análise Técnica</p>
 </div>
 <div class="controls">
@@ -2735,7 +2735,7 @@ function checkPoolAlerts() {
     if (!advice) return;
     alerts.push({ pool: p, idx, price, health, advice });
     if (advice.urgency === 'high' || advice.urgency === 'medium') {
-      pushNotification('Monitor de Pools — ' + p.symbol, advice.title, 'pool_' + p.symbol + '_' + health.status);
+      pushNotification('DefiMind — ' + p.symbol, advice.title, 'pool_' + p.symbol + '_' + health.status);
     }
   });
   updateBell(alerts);
@@ -2835,8 +2835,8 @@ function openDonateModal() {
   modal.className = 'modal-bg'; modal.id = 'donateModal';
   modal.innerHTML = `<div class="modal" style="width:340px;text-align:center">
     <div style="font-size:1.6rem;margin-bottom:.35rem">☕</div>
-    <h3 style="color:var(--cyan);margin-bottom:.2rem;font-size:1rem">Apoiar o Desenvolvedor</h3>
-    <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem">Desenvolvido por <strong style="color:var(--text)">Uaná Lee</strong><br>Se o app te ajudou, considere apoiar 🙏</p>
+    <h3 style="color:var(--cyan);margin-bottom:.2rem;font-size:1rem">Apoiar o DefiMind</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem">Desenvolvido por <strong style="color:var(--text)">Uaná Lee</strong><br>Se o DefiMind te ajudou, considere apoiar 🙏</p>
     <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem">
       <button id="dtab-pix" onclick="switchDonateTab('pix')" style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid var(--green);color:var(--green);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif;font-weight:600">PIX 🇧🇷</button>
       <button id="dtab-crypto" onclick="switchDonateTab('crypto')" style="flex:1;padding:.5rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-size:.75rem;font-family:'Inter',sans-serif">Crypto ⛓</button>
@@ -2879,7 +2879,4 @@ function doCopy(text, btnId, okLabel, defLabel) {
 
 <button id="donate-btn" onclick="openDonateModal()" title="Apoiar Uaná Lee"
   style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:200;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1.15rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:transform .18s"
-  onmouseover="this.style.transform='scale(1.12)'"
-  onmouseout="this.style.transform='scale(1)'">☕</button>
-</body>
-</html>
+  onmouseover="this.style.transform='scale(1.
