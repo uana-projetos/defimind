@@ -1,14 +1,6 @@
-const CACHE = 'defimind-v1.2.0';
-const ASSETS = [
-  '/monitor-pools/',
-  '/monitor-pools/index.html',
-  '/monitor-pools/manifest.json'
-];
+const CACHE = 'defimind-v1.3.0';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {}))
-  );
   self.skipWaiting();
 });
 
@@ -16,7 +8,7 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => {
-        console.log('[DefiMind SW] Deleting old cache:', k);
+        console.log('[DefiMind SW] Removing old cache:', k);
         return caches.delete(k);
       }))
     )
@@ -27,13 +19,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
-  // Always network-first for API and external resources
-  if (url.includes('defillama') || url.includes('anthropic') || url.includes('fonts.googleapis') || url.includes('cdnjs')) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    return;
-  }
-  // Network-first for HTML (always get fresh app)
-  if (url.includes('/monitor-pools/') && (url.endsWith('/') || url.endsWith('.html'))) {
+
+  // Always network-first for HTML — never serve stale app
+  if (url.endsWith('/') || url.endsWith('.html') || url.includes('/defimind/') && !url.includes('.')) {
     e.respondWith(
       fetch(e.request).then(resp => {
         if (resp.ok) {
@@ -45,7 +33,14 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Cache-first for other assets
+
+  // Network-first for external APIs
+  if (url.includes('defillama') || url.includes('anthropic') || url.includes('coingecko')) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    return;
+  }
+
+  // Cache-first for fonts and static libs
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
       if (resp.ok) {

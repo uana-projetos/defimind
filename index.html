@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#3b9eff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -329,7 +332,11 @@ const POOLS = {
     {"symbol":"QQQ-USDC","project":"gmtrade","chain":"Solana","apy":14.35,"tvl":38069,"index":"QQQ (Nasdaq 100)","pair_type":"STABLE"},
     {"symbol":"DIA-USDC","project":"gmtrade","chain":"Solana","apy":6.81,"tvl":27840,"index":"DIA (Dow Jones)","pair_type":"STABLE"},
     {"symbol":"IWM-USDC","project":"gmtrade","chain":"Solana","apy":9.12,"tvl":22150,"index":"IWM (Russell 2000)","pair_type":"STABLE"},
-    {"symbol":"SPX-USDC","project":"omnipair","chain":"Solana","apy":11.40,"tvl":16520,"index":"SPX (S&P 500 Perp)","pair_type":"STABLE"}
+    {"symbol":"SPX-USDC","project":"omnipair","chain":"Solana","apy":11.40,"tvl":16520,"index":"SPX (S&P 500 Perp)","pair_type":"STABLE"},
+    {"symbol":"VIX-USDC","project":"gmtrade","chain":"Solana","apy":22.80,"tvl":9840,"index":"VIX (Volatilidade)","pair_type":"STABLE"},
+    {"symbol":"NIKKEI-USDC","project":"omnipair","chain":"Solana","apy":7.45,"tvl":12300,"index":"NIKKEI (Japao)","pair_type":"STABLE"},
+    {"symbol":"DAX-USDC","project":"omnipair","chain":"Solana","apy":6.92,"tvl":10150,"index":"DAX (Alemanha)","pair_type":"STABLE"},
+    {"symbol":"FTSE-USDC","project":"omnipair","chain":"Solana","apy":6.10,"tvl":8750,"index":"FTSE 100 (UK)","pair_type":"STABLE"}
   ],
   "METALS": [
     {"symbol":"PAXG-WETH","project":"uniswap-v3","chain":"Ethereum","apy":4.52,"tvl":853000,"metal":"PAXG (Ouro)","pair_type":"ETH"},
@@ -339,7 +346,10 @@ const POOLS = {
     {"symbol":"WHYPE-XAUT0","project":"project-x","chain":"Hyperliquid","apy":18.62,"tvl":234198,"metal":"XAUT0 (Ouro)","pair_type":"HYPE"},
     {"symbol":"XAUT0-USDC","project":"orca-dex","chain":"Solana","apy":13.72,"tvl":125981,"metal":"XAUT0 (Ouro)","pair_type":"STABLE"},
     {"symbol":"PAXG-DAI","project":"uniswap-v3","chain":"Ethereum","apy":3.85,"tvl":312000,"metal":"PAXG (Ouro)","pair_type":"STABLE"},
-    {"symbol":"PAXG-USDT","project":"uniswap-v3","chain":"Ethereum","apy":4.10,"tvl":198000,"metal":"PAXG (Ouro)","pair_type":"STABLE"}
+    {"symbol":"PAXG-USDT","project":"uniswap-v3","chain":"Ethereum","apy":4.10,"tvl":198000,"metal":"PAXG (Ouro)","pair_type":"STABLE"},
+    {"symbol":"XAGt-USDC","project":"uniswap-v3","chain":"Ethereum","apy":3.21,"tvl":87000,"metal":"XAGt (Prata)","pair_type":"STABLE"},
+    {"symbol":"XAGt-WETH","project":"uniswap-v3","chain":"Ethereum","apy":2.95,"tvl":54000,"metal":"XAGt (Prata)","pair_type":"ETH"},
+    {"symbol":"XPTt-USDC","project":"uniswap-v3","chain":"Ethereum","apy":2.40,"tvl":32000,"metal":"XPTt (Platina)","pair_type":"STABLE"}
   ],
   "STABLE": [
     {"symbol":"USDC-BRLA","project":"uniswap-v3","chain":"Polygon","apy":29.49,"tvl":172912},
@@ -3247,10 +3257,13 @@ renderLoans();
 checkLoanAlerts();
 
 
+
+// Auto-clear stale SW caches
+if("caches" in window){caches.keys().then(ks=>{ks.filter(k=>!k.includes("v1.3")).forEach(k=>caches.delete(k));});}
 // ── Service Worker (PWA)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/monitor-pools/sw.js')
+    navigator.serviceWorker.register('/defimind/sw.js')
       .then(r => console.log('[DefiMind] SW registered:', r.scope))
       .catch(e => console.log('[DefiMind] SW error:', e));
   });
