@@ -235,6 +235,20 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 .wn-entry ul li.tag-improve::before{content:'⚡'}
 #whats-new-modal .wn-footer{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}
 
+/* ── Charts ── */
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem}
+.chart-card h4{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem;font-weight:600}
+.apy-bar-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
+.apy-bar-label{font-size:.68rem;color:var(--text);width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apy-bar-track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.apy-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.apy-bar-val{font-size:.68rem;color:var(--cyan);font-weight:700;width:42px;text-align:right;flex-shrink:0}
+.donut-wrap{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+.donut-legend{display:flex;flex-direction:column;gap:.4rem}
+.donut-legend-item{display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--text)}
+.donut-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;margin:.4rem 0 .1rem}
+.gauge-label{font-size:.62rem;color:var(--muted);margin-top:.1rem;text-align:center}
 /* Donate btn pulse */
 @keyframes donate-pulse{0%,100%{box-shadow:0 4px 18px rgba(59,158,255,.35)}50%{box-shadow:0 4px 28px rgba(59,158,255,.75),0 0 0 6px rgba(59,158,255,.15)}}
 #donate-btn.pulsing{animation:donate-pulse 1.5s ease-in-out infinite}
@@ -414,6 +428,7 @@ footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5
     </button>
   </div>
   <div id="poolResultsInfo" class="search-results-info"></div>
+  <div id="apyChartSection"></div>
   <div id="poolSections"></div>
   <div id="dashSection"></div>
   <div id="myPoolsSection"></div>
@@ -1403,6 +1418,8 @@ function showTab(tab) {
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
     const btn = document.getElementById('tab-pools');
     if (btn) btn.classList.add('active');
+    renderApyChart();
+    renderWalletBanners();
     // Show toggle on pools tab (has LP market tables)
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = '';
@@ -1460,6 +1477,31 @@ function updateTabBadges() {
     const total = wallets.length + pools.length;
     if (pb) { pb.textContent = total; pb.style.display = total > 0 ? '' : 'none'; }
   } catch(e) {}
+}
+
+function renderApyChart() {
+  const el = document.getElementById('apyChartSection');
+  if (!el) return;
+  const CHAIN_COL = {'Ethereum':'#627eea','Solana':'#9945ff','Base':'#0052ff','Arbitrum':'#28a0f0','Hyperliquid':'#00d4ff','Mantle':'#68edcb','Polygon':'#8247e5','BSC':'#f3ba2f'};
+  const allPools = [];
+  Object.values(POOLS).forEach(cat => {
+    if (!Array.isArray(cat)) return;
+    cat.forEach(p => { if (p.apy && p.symbol) allPools.push(p); });
+  });
+  const top8 = allPools.sort((a,b) => b.apy - a.apy).slice(0, 8);
+  if (!top8.length) { el.innerHTML = ''; return; }
+  const maxApy = top8[0].apy;
+  const bars = top8.map(p => {
+    const pct = Math.round(p.apy / maxApy * 100);
+    const color = CHAIN_COL[p.chain] || 'var(--cyan)';
+    const label = p.symbol.length > 15 ? p.symbol.slice(0,14)+'…' : p.symbol;
+    return `<div class="apy-bar-row">
+      <span class="apy-bar-label" title="${p.symbol} · ${p.chain}">${label}</span>
+      <div class="apy-bar-track"><div class="apy-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="apy-bar-val">${p.apy.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="chart-card"><h4>🏆 Top APY — melhores pools</h4>${bars}<div style="font-size:.6rem;color:var(--muted);margin-top:.5rem;text-align:right">Dados de referência · use DefiLlama Live para tempo real</div></div>`;
 }
 
 function renderSections() {
@@ -3223,6 +3265,24 @@ function renderDashboard() {
   const healthPct = pools.length ? Math.round(inRange / pools.length * 100) : 0;
   const healthColor = healthPct >= 80 ? 'var(--green)' : healthPct >= 50 ? 'var(--orange)' : 'var(--red)';
 
+  const _CHAIN_COLORS = {'Ethereum':'#627eea','Solana':'#9945ff','Base':'#0052ff','Arbitrum':'#28a0f0','Hyperliquid':'#00d4ff','Mantle':'#68edcb','Polygon':'#8247e5','BSC':'#f3ba2f'};
+  const _chainEntries = Object.entries(byChain);
+  const _totalP = pools.length;
+  const _R = 44, _CX = 56, _CY = 56, _CIRC = 2 * Math.PI * _R;
+  let _offset = 0;
+  const _segments = _chainEntries.map(([chain, count]) => {
+    const frac = count / _totalP;
+    const dash = frac * _CIRC;
+    const gap = _CIRC - dash;
+    const color = _CHAIN_COLORS[chain] || '#888';
+    const seg = `<circle cx="${_CX}" cy="${_CY}" r="${_R}" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(_offset).toFixed(2)}" style="transform:rotate(-90deg);transform-origin:${_CX}px ${_CY}px"/>`;
+    _offset -= (frac * _CIRC);
+    return {seg, chain, count, color};
+  });
+  const _donutSvg = `<svg width="112" height="112" viewBox="0 0 112 112"><circle cx="${_CX}" cy="${_CY}" r="${_R}" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="14"/>${_segments.map(s=>s.seg).join('')}<text x="${_CX}" y="${_CY}" text-anchor="middle" dy=".35em" fill="var(--text)" font-size="13" font-weight="700">${_totalP}</text><text x="${_CX}" y="${_CY+14}" text-anchor="middle" fill="var(--muted)" font-size="7">pools</text></svg>`;
+  const _legendHtml = _segments.map(s => `<div class="donut-legend-item"><div class="donut-legend-dot" style="background:${s.color}"></div>${s.chain} <span style="color:var(--muted)">(${s.count})</span></div>`).join('');
+  const donutHtml = _chainEntries.length > 0 ? `<div class="chart-card" style="margin-top:1rem"><h4>🌐 Alocação por rede</h4><div class="donut-wrap">${_donutSvg}<div class="donut-legend">${_legendHtml}</div></div></div>` : '';
+
   let allocHtml = Object.entries(byAsset).map(([k,v]) => `<span style="color:var(--muted);font-size:.6rem">${k}: ${v}</span>`).join(' · ');
   let chainHtml = Object.entries(byChain).map(([k,v]) => `<span style="color:var(--muted);font-size:.6rem">${k}: ${v}</span>`).join(' · ');
 
@@ -3240,6 +3300,8 @@ function renderDashboard() {
         ${Object.entries(TECH).map(([k,v]) => `<div>${k}: <span style="color:var(--cyan)">${fmtPrice(v.price)}</span></div>`).join('')}
       </div></div>
     </div>`;
+  // append donut chart
+  container.innerHTML += donutHtml;
 }
 
 // === 2. MINI CHART DE PREÇO (CoinGecko sparkline 7d) ===
@@ -4102,6 +4164,24 @@ function renderLoans() {
       const hf = calcHF(loan.col_usd, loan.lt_pct, loan.debt_usd);
       const cls = hfCardClass(hf);
       const pc = hfClass(hf);
+      // Build SVG gauge for HF
+      const gaugeColor = hf >= 2 ? '#34d399' : hf >= 1.5 ? '#f59e0b' : hf >= 1.2 ? '#f97316' : '#ef4444';
+      const gaugeAngle = Math.min(hf / 3, 1); // 0..1 mapping HF 0-3
+      const gR = 28, gCX = 36, gCY = 34;
+      const startAngle = Math.PI; // left = 0
+      const endAngle = Math.PI + gaugeAngle * Math.PI;
+      const x1 = gCX + gR * Math.cos(startAngle), y1 = gCY + gR * Math.sin(startAngle);
+      const x2 = gCX + gR * Math.cos(endAngle),   y2 = gCY + gR * Math.sin(endAngle);
+      const largeArc = gaugeAngle > 0.5 ? 1 : 0;
+      const gaugeSvg = hf < 999 ? \`<div class="gauge-wrap">
+        <svg width="72" height="40" viewBox="0 0 72 40">
+          <path d="M\${(gCX-gR).toFixed(1)} \${gCY} A \${gR} \${gR} 0 0 1 \${(gCX+gR).toFixed(1)} \${gCY}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8" stroke-linecap="round"/>
+          <path d="M\${x1.toFixed(1)} \${y1.toFixed(1)} A \${gR} \${gR} 0 \${largeArc} 1 \${x2.toFixed(1)} \${y2.toFixed(1)}" fill="none" stroke="\${gaugeColor}" stroke-width="8" stroke-linecap="round"/>
+          <text x="\${gCX}" y="\${gCY-2}" text-anchor="middle" fill="\${gaugeColor}" font-size="10" font-weight="700">\${hfLabel(hf)}</text>
+          <text x="\${gCX}" y="\${gCY+10}" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="6">HF</text>
+        </svg>
+        <div class="gauge-label">\${hf >= 2 ? 'Seguro ✅' : hf >= 1.5 ? 'Atenção ⚠️' : hf >= 1.2 ? 'Risco 🔶' : 'CRÍTICO 🚨'}</div>
+      </div>\` : '';
       const liqPrice = loan.liq_price ? fmtPrice(loan.liq_price) : '—';
       const proto = LOAN_PROTOCOLS.find(p => p.name === loan.protocol) || {icon:'📄'};
       html += `<div class="loan-card ${cls}">
@@ -4117,6 +4197,7 @@ function renderLoans() {
             <button class="btn btn-sm btn-danger" onclick="removeLoan(${idx})" style="padding:3px 8px;font-size:.65rem">✕</button>
           </div>
         </div>
+        ${gaugeSvg}
         <div class="loan-metrics">
           <div class="loan-metric">
             <div class="lm-val" style="color:var(--green)">$${fmtNum(loan.col_usd)}</div>
@@ -4419,6 +4500,7 @@ function dismissPWA() {
 // ══════════════════════════════════════════════════════════════════════════════════
 
 renderSections();
+renderApyChart();
 renderMyPools();
 renderDashboard();
 renderSimulator();
