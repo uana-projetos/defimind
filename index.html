@@ -218,6 +218,21 @@ footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5
 .proto-link:hover{background:rgba(59,158,255,.28);transform:scale(1.1)}
 .btn-protocol{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:6px;background:linear-gradient(135deg,rgba(59,158,255,.15),rgba(139,92,246,.15));border:1px solid rgba(59,158,255,.35);color:var(--cyan);font-size:.8rem;cursor:pointer;text-decoration:none;font-weight:500;transition:background .15s}
 .btn-protocol:hover{background:linear-gradient(135deg,rgba(59,158,255,.28),rgba(139,92,246,.28))}
+
+/* ── Tab Navigation ──────────────────────────────── */
+.tab-nav{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:80;overflow-x:auto;scrollbar-width:none}
+.tab-nav::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:90px;padding:.7rem .5rem;border:none;background:none;color:var(--muted);font-size:.82rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.35rem;border-bottom:2px solid transparent;transition:color .18s,border-color .18s;white-space:nowrap;letter-spacing:.01em}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);background:rgba(59,158,255,.06)}
+.tab-btn .tab-icon{font-size:1rem}
+.tab-badge{background:var(--cyan);color:#0d1117;font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 5px;margin-left:.2rem;line-height:1.4}
+/* hide top-toggle when not on yield tab */
+.controls-yield{transition:opacity .18s}
+/* section transitions */
+.tab-section{animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
 </style>
 </head>
 <body>
@@ -228,7 +243,7 @@ footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5
 <p class="timestamp">Atualizado: 2026-05-09 | Fonte: DefiLlama + Análise Técnica</p>
 </div>
 <div class="controls">
-<label class="toggle"><input type="checkbox" id="topToggle" checked> Top 10 por ativo</label>
+<label class="toggle controls-yield" id="topToggleWrap"><input type="checkbox" id="topToggle" checked> Top 10</label>
 <button id="alert-bell" onclick="openAlertsPanel()" title="Alertas das suas pools"
   style="position:relative;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:.3rem;transition:border-color .2s">
   🔔 <span id="alert-bell-label" style="font-size:.72rem">Alertas</span>
@@ -236,12 +251,38 @@ footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5
 </button>
 </div>
 </header>
+
+<!-- Tab Navigation -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" id="tab-yield" onclick="showTab('yield')">
+    <span class="tab-icon">📊</span> Yield
+  </button>
+  <button class="tab-btn" id="tab-pools" onclick="showTab('pools')">
+    <span class="tab-icon">⚡</span> Minhas Pools
+    <span class="tab-badge" id="poolsBadge" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" id="tab-loans" onclick="showTab('loans')">
+    <span class="tab-icon">🏛</span> Empréstimos
+    <span class="tab-badge" id="loansBadge" style="display:none">0</span>
+  </button>
+</nav>
 <div class="notif-bar" id="notifBar"></div>
-<div id="dashSection"></div>
-<div id="myPoolsSection"></div>
-<div id="loansSection"></div>
-<div id="simSection"></div>
-<div id="sections"></div>
+<!-- ── TAB: YIELD ──────────────────────────── -->
+<div id="tabYield" class="tab-section">
+  <div id="sections"></div>
+</div>
+
+<!-- ── TAB: MINHAS POOLS ──────────────────── -->
+<div id="tabPools" class="tab-section" style="display:none">
+  <div id="dashSection"></div>
+  <div id="myPoolsSection"></div>
+  <div id="simSection"></div>
+</div>
+
+<!-- ── TAB: EMPRÉSTIMOS ───────────────────── -->
+<div id="tabLoans" class="tab-section" style="display:none">
+  <div id="loansSection"></div>
+</div>
 
 <div id="pwa-banner">
   <span style="font-size:1.3rem">🧠</span>
@@ -255,7 +296,7 @@ footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5
 <div id="panelContent"></div>
 </div>
 <footer>
-Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<span class="version-tag">v1.4.0</span><br>
+Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<span class="version-tag">v1.5.0</span><br>
 Este painel é informativo. Não constitui recomendação financeira. Verifique os riscos de impermanent loss antes de fornecer liquidez.
 </footer>
 </div>
@@ -495,6 +536,69 @@ const RWA_INFO = {
 function fmt(n) { return n >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : '$' + (n/1e3).toFixed(0) + 'K'; }
 function fmtPrice(n) { return n >= 1000 ? '$' + n.toLocaleString('en',{maximumFractionDigits:0}) : '$' + n.toFixed(2); }
 
+// ══════════════════════════════════════════════════════════
+// ── Tab Navigation
+// ══════════════════════════════════════════════════════════
+function showTab(tab) {
+  // Hide all tab sections
+  ['tabYield','tabPools','tabLoans'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Remove active from all tab buttons
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  // Show selected section
+  if (tab === 'yield') {
+    const el = document.getElementById('tabYield');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-yield');
+    if (btn) btn.classList.add('active');
+    // Show toggle
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = '';
+  } else if (tab === 'pools') {
+    const el = document.getElementById('tabPools');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-pools');
+    if (btn) btn.classList.add('active');
+    // Hide toggle (not relevant on pools tab)
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = 'none';
+    // Render pool-specific sections
+    if (typeof renderMyPools === 'function') renderMyPools();
+    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof renderSimulator === 'function') renderSimulator();
+  } else if (tab === 'loans') {
+    const el = document.getElementById('tabLoans');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-loans');
+    if (btn) btn.classList.add('active');
+    // Hide toggle
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = 'none';
+    if (typeof renderLoans === 'function') renderLoans();
+  }
+
+  localStorage.setItem('defiTab', tab);
+  updateTabBadges();
+}
+
+function updateTabBadges() {
+  // Pools badge
+  try {
+    const pools = JSON.parse(localStorage.getItem('myPools') || '[]');
+    const pb = document.getElementById('poolsBadge');
+    if (pb) { pb.textContent = pools.length; pb.style.display = pools.length > 0 ? '' : 'none'; }
+  } catch(e) {}
+  // Loans badge
+  try {
+    const loans = JSON.parse(localStorage.getItem('defiLoans') || '[]');
+    const lb = document.getElementById('loansBadge');
+    if (lb) { lb.textContent = loans.length; lb.style.display = loans.length > 0 ? '' : 'none'; }
+  } catch(e) {}
+}
+
 function renderSections() {
   const top10 = document.getElementById('topToggle').checked;
   const container = document.getElementById('sections');
@@ -664,7 +768,6 @@ document.getElementById('panelClose').addEventListener('click', closePanel);
 document.getElementById('overlay').addEventListener('click', closePanel);
 document.getElementById('topToggle').addEventListener('change', renderSections);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closePanel(); });
-renderSections();
 
 // === AUTO-REFRESH via DefiLlama API (a cada 6h) ===
 const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
@@ -1703,6 +1806,7 @@ function saveNewPool() {
   saveMyPools(pools);
   closeModal();
   renderMyPools();
+  updateTabBadges();
 }
 
 function removePool(idx) {
@@ -3294,6 +3398,7 @@ function saveLoan(editIdx) {
   closeModal();
   renderLoans();
   checkLoanAlerts();
+  updateTabBadges();
 }
 
 function removeLoan(idx) {
@@ -3344,14 +3449,23 @@ function dismissPWA() {
   if (b) b.classList.remove('show');
 }
 
-// ── Init loans on load
+// ── Init: render all data first, then show saved tab
+renderSections();
+renderMyPools();
+renderDashboard();
+renderSimulator();
 renderLoans();
 checkLoanAlerts();
+updateTabBadges();
+
+// Restore last active tab (default: yield)
+const savedTab = localStorage.getItem('defiTab') || 'yield';
+showTab(savedTab);
 
 
 
 // Auto-clear stale SW caches
-if("caches" in window){caches.keys().then(ks=>{ks.filter(k=>!k.includes("v1.3")).forEach(k=>caches.delete(k));});}
+if("caches" in window){caches.keys().then(ks=>{ks.filter(k=>!k.includes("v1.4")).forEach(k=>caches.delete(k));});}
 // ── Service Worker (PWA)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
