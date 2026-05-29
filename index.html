@@ -169,7 +169,7 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
   .sim-controls{flex-direction:column}
   .tabs{flex-wrap:wrap}
   .tab{font-size:.72rem;padding:.45rem .6rem}
-  #donate-btn{bottom:.85rem;right:.85rem;width:40px;height:40px;font-size:1rem}
+  #donate-btn{bottom:.85rem;right:.85rem;font-size:.8rem;padding:.4rem .75rem}
 }
 @media(max-width:480px){
   .dash{grid-template-columns:1fr}
@@ -234,6 +234,11 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 .wn-entry ul li.tag-fix::before{content:'🔧'}
 .wn-entry ul li.tag-improve::before{content:'⚡'}
 #whats-new-modal .wn-footer{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}
+
+/* Donate btn pulse */
+@keyframes donate-pulse{0%,100%{box-shadow:0 4px 18px rgba(59,158,255,.35)}50%{box-shadow:0 4px 28px rgba(59,158,255,.75),0 0 0 6px rgba(59,158,255,.15)}}
+#donate-btn.pulsing{animation:donate-pulse 1.5s ease-in-out infinite}
+#donate-btn .donate-label{font-size:.72rem;font-weight:700;letter-spacing:.3px;margin-left:.3rem}
 /* footer version */
 footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5rem}
 
@@ -4491,8 +4496,30 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
   </div>
 </div>
 
-<button id="donate-btn" onclick="openDonateModal()" title="Apoiar Uaná Lee"
-  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1.15rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:transform .18s;display:flex;align-items:center;justify-content:center"
-  onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'">☕</button>
+<button id="donate-btn" onclick="openDonateModal()" title="Apoiar o projeto DefiMind"
+  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;height:40px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:all .25s ease;display:flex;align-items:center;justify-content:center;padding:.4rem .9rem;gap:.3rem;white-space:nowrap"
+  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+  ☕ <span class="donate-label">Apoiar</span>
+</button>
+<script>
+(function(){
+  var btn = document.getElementById('donate-btn');
+  if(!btn) return;
+  // Pulse on first visit for 6 seconds to draw attention
+  var seen = localStorage.getItem('donate_seen');
+  if(!seen){
+    btn.classList.add('pulsing');
+    setTimeout(function(){
+      btn.classList.remove('pulsing');
+      localStorage.setItem('donate_seen','1');
+    }, 6000);
+  }
+  // On click mark as seen
+  btn.addEventListener('click', function(){
+    btn.classList.remove('pulsing');
+    localStorage.setItem('donate_seen','1');
+  });
+})();
+</script>
 </body>
 </html>
