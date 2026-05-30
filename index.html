@@ -307,8 +307,9 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
 footer .version-tag{font-size:.65rem;color:var(--cyan);opacity:.6;margin-left:.5rem}
 
 /* ── Splash Screen ───────────────────────────── */
-#splash{position:fixed;inset:0;background:#080c18;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity .5s ease,visibility .5s ease}
+#splash{position:fixed;top:0;left:0;right:0;bottom:0;background:#080c18;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;animation:splash-auto-hide .4s 1.8s ease forwards}
 #splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
+@keyframes splash-auto-hide{to{opacity:0;visibility:hidden;pointer-events:none}}
 #splash svg{animation:splash-pop .6s cubic-bezier(.34,1.56,.64,1) forwards}
 @keyframes splash-pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 #splash .splash-title{font-size:2rem;font-weight:900;color:#fff;letter-spacing:1px;animation:splash-fade .6s .25s both}
@@ -4792,10 +4793,4 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
   }
   // On click mark as seen
   btn.addEventListener('click', function(){
-    btn.classList.remove('pulsing');
-    localStorage.setItem('donate_seen','1');
-  });
-})();
-</script>
-</body>
-</html>
+    btn.classLi
