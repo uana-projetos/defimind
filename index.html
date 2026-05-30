@@ -4942,13 +4942,30 @@ function scanWalletOpps(i) {
 // Override openWalletModal with enhanced version
 openWalletModal = function() {
   var wallets = getWallets();
-  var panel = document.getElementById('panelContent');
-  if (!panel) return;
   var listHtml = wallets.length === 0
     ? '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:.6rem 0">Nenhuma carteira conectada.</div>'
     : wallets.map(function(w,i){ return buildWCard(w,i); }).join('');
-  panel.innerHTML = '<h3 style="font-size:.95rem;margin-bottom:.6rem;color:var(--text)">Carteiras Read-Only</h3><p style="font-size:.71rem;color:var(--muted);margin-bottom:.65rem">Endereco publico apenas — sem chave privada.</p><input id="waddr" type="text" placeholder="0x... ou endereco Solana" oninput="autoDetectNet(this.value)" style="width:100%;box-sizing:border-box;background:var(--input);border:1px solid var(--border);border-radius:7px;padding:.45rem .7rem;color:var(--text);font-size:.76rem;font-family:monospace;outline:none;margin-bottom:.35rem"><div style="font-size:.62rem;color:var(--muted);margin-bottom:.28rem;text-transform:uppercase;letter-spacing:.4px">Rede</div><div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.35rem"><button class="wnet-btn active" data-net="auto" onclick="pickNet(\'auto\')">Auto</button><button class="wnet-btn" data-net="evm" onclick="pickNet(\'evm\')" style="color:#627eea">EVM</button><button class="wnet-btn" data-net="solana" onclick="pickNet(\'solana\')" style="color:#9945ff">Solana</button><button class="wnet-btn" data-net="hyperliquid" onclick="pickNet(\'hyperliquid\')" style="color:#00d4ff">Hyperliquid</button></div><div id="wnet-hint" style="font-size:.67rem;color:var(--muted);min-height:.85rem;margin-bottom:.45rem"></div><button class="btn btn-primary" onclick="addWalletNew()" style="width:100%;margin-bottom:.85rem">+ Conectar carteira</button><div id="wlist">'+listHtml+'</div>';
-  openPanel();
+
+  openModal('<div class="modal" style="max-width:480px;width:95vw">'
+    + '<h3 style="font-size:.95rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem">'
+    + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>'
+    + 'Carteiras Read-Only</h3>'
+    + '<p style="font-size:.71rem;color:var(--muted);margin-bottom:.65rem">Endereco publico apenas &mdash; sem chave privada.</p>'
+    + '<input id="waddr" type="text" placeholder="0x... ou endereco Solana" oninput="autoDetectNet(this.value)"'
+    + ' style="width:100%;box-sizing:border-box;background:var(--input);border:1px solid var(--border);border-radius:7px;padding:.45rem .7rem;color:var(--text);font-size:.76rem;font-family:monospace;outline:none;margin-bottom:.35rem">'
+    + '<div style="font-size:.62rem;color:var(--muted);margin-bottom:.28rem;text-transform:uppercase;letter-spacing:.4px">Rede</div>'
+    + '<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.35rem">'
+    + '<button class="wnet-btn active" data-net="auto" onclick="pickNet(\'auto\')">Auto</button>'
+    + '<button class="wnet-btn" data-net="evm" onclick="pickNet(\'evm\')" style="color:#627eea">EVM</button>'
+    + '<button class="wnet-btn" data-net="solana" onclick="pickNet(\'solana\')" style="color:#9945ff">Solana</button>'
+    + '<button class="wnet-btn" data-net="hyperliquid" onclick="pickNet(\'hyperliquid\')" style="color:#00d4ff">Hyperliquid</button>'
+    + '</div>'
+    + '<div id="wnet-hint" style="font-size:.67rem;color:var(--muted);min-height:.85rem;margin-bottom:.45rem"></div>'
+    + '<button class="btn btn-primary" onclick="addWalletNew()" style="width:100%;margin-bottom:.85rem">+ Conectar carteira</button>'
+    + '<div id="wlist">' + listHtml + '</div>'
+    + '<div style="margin-top:1rem;text-align:right"><button class="btn" onclick="closeModal()">Fechar</button></div>'
+    + '</div>');
+
   updateWalletBadge();
   wallets.forEach(function(_,i){ setTimeout(function(){ scanWalletOpps(i); }, 300 + i*150); });
 };
@@ -4968,16 +4985,22 @@ function addWalletNew() {
   updateTabBadges();
   updateWalletBadge();
   window._wnet = 'auto';
-  openWalletModal();
+  closeModal();
+  setTimeout(openWalletModal, 50);
 }
 // Override addWallet too
 addWallet = addWalletNew;
 // Override removeWallet
 var _origRemoveWallet = removeWallet;
 removeWallet = function(idx) {
-  _origRemoveWallet(idx);
+  var wallets = getWallets();
+  wallets.splice(idx, 1);
+  saveWallets(wallets);
+  renderWalletBanners();
+  updateTabBadges();
   updateWalletBadge();
-  setTimeout(openWalletModal, 100);
+  closeModal();
+  setTimeout(openWalletModal, 50);
 };
 
 // ── Smart Wallet Analysis ─────────────────────────────────────────────────────
