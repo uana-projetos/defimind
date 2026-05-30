@@ -1,4 +1,4 @@
-const CACHE = 'defimind-v2.0.0';
+const CACHE = 'defimind-v2.0.3';
 
 self.addEventListener('install', e => {
   // NÃO chama skipWaiting automaticamente — espera mensagem do app
