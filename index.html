@@ -2338,6 +2338,23 @@ function openAddModal() {
   modal.innerHTML = `<div class="modal">
     <h3>Adicionar Minha Pool</h3>
 
+        <!-- Foto do Print da Pool -->
+    <div style="background:rgba(59,158,255,.05);border:1px dashed rgba(59,158,255,.3);border-radius:6px;padding:.75rem;margin-bottom:.85rem">
+      <div style="font-size:.65rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">📷 Foto da Pool — use como referência</div>
+      <div id="fm-drop" style="border:1px dashed var(--border);border-radius:4px;padding:.75rem;text-align:center;cursor:pointer;font-size:.65rem;color:var(--muted)"
+        onclick="document.getElementById('fm-file').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--cyan)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="fmDrop(event)">
+        <input type="file" id="fm-file" accept="image/*" style="display:none" onchange="fmFile(event)">
+        📋 Cole um print (Ctrl+V) ou clique para selecionar
+      </div>
+      <div id="fm-prev" style="margin-top:.4rem;display:none">
+        <img id="fm-img" style="max-width:100%;max-height:130px;border-radius:4px;border:1px solid var(--border);display:block">
+        <div id="fm-nums" style="margin-top:.4rem;font-size:.68rem;color:var(--muted)">Cole a imagem para ver os dados detectados</div>
+      </div>
+    </div>
+
         <!-- Quick-fill helper: selecionar preenche os campos abaixo -->
     <div class="form-group" style="margin-bottom:1rem">
       <label style="font-size:.65rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px">⚡ Atalho — preencher pelo monitor</label>
@@ -4696,6 +4713,47 @@ if ('caches' in window) {
   });
 }
 
+
+// ── Pool Screenshot Helper (sem API Key) ──────────────────────────
+function fmShowImg(src) {
+  var img = document.getElementById('fm-img');
+  var prev = document.getElementById('fm-prev');
+  if (!img || !prev) return;
+  img.src = src;
+  prev.style.display = '';
+  // Try to extract numbers from filename or alt (basic hint)
+  var nums = document.getElementById('fm-nums');
+  if (nums) nums.innerHTML = '<span style="color:var(--cyan)">✓ Print carregado</span> — use como referência para preencher Min/Max/Price abaixo.';
+}
+function fmFile(e) {
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev){ fmShowImg(ev.target.result); };
+  r.readAsDataURL(f);
+}
+function fmDrop(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev){ fmShowImg(ev.target.result); };
+  r.readAsDataURL(f);
+}
+// Ctrl+V paste support for pool modal
+document.addEventListener('paste', function(e) {
+  var modal = document.getElementById('addModal');
+  if (!modal) return;
+  var items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (var i=0; i<items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      var blob = items[i].getAsFile();
+      var r = new FileReader();
+      r.onload = function(ev){ fmShowImg(ev.target.result); };
+      r.readAsDataURL(blob);
+      break;
+    }
+  }
+});
 // ── Service Worker (PWA) + detecção de update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
