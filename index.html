@@ -615,6 +615,8 @@ Este painel é informativo. Não constitui recomendação financeira. Verifique 
 <script>
 const POOLS = {
   "ETH": [
+    {"symbol":"USDC","project":"fluid-lending","chain":"Ethereum","apy":7.1,"tvl":142800000},
+    {"symbol":"ETH","project":"fluid-lite","chain":"Ethereum","apy":6.4,"tvl":128900000},
     {"symbol":"ETH-USDC","project":"uniswap-v4","chain":"Base","apy":323.26,"tvl":144086},
     {"symbol":"WETH-ARB","project":"uniswap-v3","chain":"Arbitrum","apy":103.62,"tvl":2234440},
     {"symbol":"ETH-USDC","project":"uniswap-v4","chain":"BSC","apy":37.72,"tvl":193043},
@@ -633,6 +635,8 @@ const POOLS = {
   ],
   "BTC": [
     {"symbol":"SOL-CBBTC","project":"orca-dex","chain":"Solana","apy":46.7,"tvl":6487950},
+    {"symbol":"UBTC-USDC","project":"project-x","chain":"Hyperliquid","apy":24.18,"tvl":9843600},
+    {"symbol":"UBTC-USDT","project":"project-x","chain":"Hyperliquid","apy":19.74,"tvl":7221400},
     {"symbol":"WBTC-WETH","project":"uniswap-v3","chain":"Ethereum","apy":28.45,"tvl":42183200},
     {"symbol":"WBTC-USDC","project":"uniswap-v3","chain":"Ethereum","apy":18.72,"tvl":31567800},
     {"symbol":"cbBTC-WETH","project":"uniswap-v3","chain":"Base","apy":22.38,"tvl":8924100},
@@ -644,6 +648,10 @@ const POOLS = {
     {"symbol":"WBTC-USDT","project":"curve","chain":"Ethereum","apy":8.34,"tvl":18743000}
   ],
   "SOL": [
+    {"symbol":"SOL-USDC","project":"gmtrade","chain":"Solana","apy":75.5,"tvl":5900000},
+    {"symbol":"JITOSOL","project":"jito-liquid-staking","chain":"Solana","apy":5.6,"tvl":804100000},
+    {"symbol":"USDC","project":"jupiter-lend","chain":"Solana","apy":5.5,"tvl":422200000},
+    {"symbol":"MSOL","project":"marinade-liquid-staking","chain":"Solana","apy":6.9,"tvl":249800000},
     {"symbol":"SOL-WETH","project":"uniswap-v3","chain":"Arbitrum","apy":59.01,"tvl":100002},
     {"symbol":"WSOL-USDT","project":"raydium-amm","chain":"Solana","apy":41.53,"tvl":2184967},
     {"symbol":"SOL-USDC","project":"orca-dex","chain":"Solana","apy":38.90,"tvl":9437800},
@@ -658,6 +666,8 @@ const POOLS = {
   "HYPE": [
     {"symbol":"WHYPE-USDC","project":"project-x","chain":"Hyperliquid","apy":29.63,"tvl":11736775,"pair_type":"STABLE"},
     {"symbol":"WHYPE-UBTC","project":"project-x","chain":"Hyperliquid","apy":41.55,"tvl":6756122,"pair_type":"BTC"},
+    {"symbol":"UBTC-USDC","project":"project-x","chain":"Hyperliquid","apy":24.18,"tvl":9843600,"pair_type":"STABLE"},
+    {"symbol":"UBTC-USDT","project":"project-x","chain":"Hyperliquid","apy":19.74,"tvl":7221400,"pair_type":"STABLE"},
     {"symbol":"WHYPE-UETH","project":"project-x","chain":"Hyperliquid","apy":14.6,"tvl":3915274,"pair_type":"ETH"},
     {"symbol":"WHYPE-USDC","project":"project-x","chain":"Hyperliquid","apy":68.17,"tvl":1849924,"pair_type":"STABLE"},
     {"symbol":"WHYPE-USD₮0","project":"project-x","chain":"Hyperliquid","apy":18.12,"tvl":1775638,"pair_type":"STABLE"},
@@ -715,6 +725,9 @@ const POOLS = {
     {"symbol":"SPYX-USDC","project":"xstocks","chain":"Mantle","apy":19.42,"tvl":2183400,"index":"SPYX (S&P 500 Mantle)","pair_type":"STABLE"}
   ],
   "METALS": [
+    {"symbol":"XAU-USDC","project":"gmtrade","chain":"Solana","apy":65.5,"tvl":7300000},
+    {"symbol":"XAG-USDC","project":"gmtrade","chain":"Solana","apy":75.3,"tvl":3200000},
+    {"symbol":"WTI-USDC","project":"gmtrade","chain":"Solana","apy":57.0,"tvl":2200000},
     {"symbol":"PAXG-WETH","project":"uniswap-v3","chain":"Ethereum","apy":4.52,"tvl":853000,"metal":"PAXG (Ouro)","pair_type":"ETH"},
     {"symbol":"PAXG-USDC","project":"uniswap-v3","chain":"Ethereum","apy":6.18,"tvl":624000,"metal":"PAXG (Ouro)","pair_type":"STABLE"},
     {"symbol":"XAUT-USDC","project":"uniswap-v3","chain":"Ethereum","apy":5.83,"tvl":481000,"metal":"XAUT (Ouro)","pair_type":"STABLE"},
@@ -728,6 +741,9 @@ const POOLS = {
     {"symbol":"XPTt-USDC","project":"uniswap-v3","chain":"Ethereum","apy":2.40,"tvl":32000,"metal":"XPTt (Platina)","pair_type":"STABLE"}
   ],
   "STABLE": [
+    {"symbol":"WETH-USDC","project":"aerodrome-slipstream","chain":"Base","apy":54.9,"tvl":12900000},
+    {"symbol":"USDC-CBBTC","project":"aerodrome-slipstream","chain":"Base","apy":107.0,"tvl":3800000},
+    {"symbol":"SUSDAI","project":"usd-ai","chain":"Arbitrum","apy":7.0,"tvl":299900000},
     {"symbol":"USDC-BRLA","project":"uniswap-v3","chain":"Polygon","apy":29.49,"tvl":172912},
     {"symbol":"USDC-USDT","project":"curve","chain":"Ethereum","apy":24.18,"tvl":342891700},
     {"symbol":"USDC-USDT","project":"aerodrome","chain":"Base","apy":22.45,"tvl":48273100},
