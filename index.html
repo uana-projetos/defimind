@@ -5152,19 +5152,23 @@ function fmPrep(src, cb) {
   var el = new Image();
   el.onload = function() {
     var c = document.createElement("canvas");
-    c.width = el.width * 2.5; c.height = el.height * 2.5;
+    var sc = Math.max(2, Math.min(3, 1200 / Math.max(el.width, 1)));
+    c.width = el.width * sc; c.height = el.height * sc;
     var x = c.getContext("2d");
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = "high";
     x.drawImage(el, 0, 0, c.width, c.height);
     var id = x.getImageData(0, 0, c.width, c.height);
     var d = id.data, avg = 0;
     for (var i = 0; i < d.length; i += 4) avg += (d[i] + d[i+1] + d[i+2]) / 3;
     avg /= (d.length / 4);
-    if (avg < 128) { for (var j = 0; j < d.length; j += 4) { d[j]=255-d[j]; d[j+1]=255-d[j+1]; d[j+2]=255-d[j+2]; } }
-    var f = 1.8;
-    for (var k = 0; k < d.length; k += 4) {
-      d[k] = Math.min(255,Math.max(0,f*(d[k]-128)+128));
-      d[k+1] = Math.min(255,Math.max(0,f*(d[k+1]-128)+128));
-      d[k+2] = Math.min(255,Math.max(0,f*(d[k+2]-128)+128));
+    var isDark = avg < 140;
+    var f = isDark ? 2.2 : 1.6;
+    for (var j = 0; j < d.length; j += 4) {
+      if (isDark) { d[j]=255-d[j]; d[j+1]=255-d[j+1]; d[j+2]=255-d[j+2]; }
+      d[j] = Math.min(255,Math.max(0,f*(d[j]-128)+128));
+      d[j+1] = Math.min(255,Math.max(0,f*(d[j+1]-128)+128));
+      d[j+2] = Math.min(255,Math.max(0,f*(d[j+2]-128)+128));
     }
     x.putImageData(id, 0, 0);
     cb(c.toDataURL("image/png"));
@@ -5173,42 +5177,58 @@ function fmPrep(src, cb) {
 }
 
 function fmOcrParse(text, el) {
-  var lines = text.split("\n").map(function(l){return l.trim();}).filter(Boolean);
-  var full = lines.join(" ");
-  var nums = [];
-  var re = /\d+\.?\d*/g; var m;
-  var raw = full.replace(/,/g,"").replace(/[$]/g,"");
-  while ((m = re.exec(raw)) !== null) { var n = parseFloat(m[0]); if (n > 0) nums.push(n); }
-  nums.sort(function(a,b){return a-b;});
-  var tiny = nums.filter(function(n){return n > 0 && n < 0.1;});
-  var mid = nums.filter(function(n){return n >= 0.1 && n < 1000;});
-  var big = nums.filter(function(n){return n >= 1000 && n < 10000000;});
-  var minP = tiny.length ? tiny[0] : (mid.length ? mid[0] : null);
-  var maxP = tiny.length > 1 ? tiny[tiny.length-1] : (mid.length > 1 ? mid[mid.length-1] : null);
-  var price = big.length ? big[0] : (mid.length > 2 ? mid[Math.floor(mid.length/2)] : null);
-  if (!price && minP && maxP) price = (minP + maxP) / 2;
-  var tRe = /\b(HYPE|ETH|BTC|SOL|USDC|USDT|WETH|ARB|OP|AVAX|JUP|BONK|WIF|UPUMP|PEPE|LINK|UNI|WBTC)\b/g;
-  var toks = []; var tm;
-  while ((tm = tRe.exec(full.toUpperCase())) !== null) toks.push(tm[1]);
-  var sym = toks.filter(function(v,i,a){return a.indexOf(v)===i;}).slice(0,2).join("/");
-  var filled = [];
-  function fill(id, val, lbl) {
-    if (val === null || isNaN(val)) return;
-    var e2 = document.getElementById(id); if (!e2) return;
-    var dec = val < 0.001 ? 8 : val < 1 ? 6 : val < 100 ? 4 : 2;
-    e2.value = parseFloat(val.toFixed(dec));
-    filled.push(lbl + ": " + e2.value);
+  var full = text.split("\n").map(function(l){return l.trim();}).filter(Boolean).join(" ");
+  // Label-based extraction: find Min/Max/Price followed by number
+  function afterLbl(lbl) {
+    var r = new RegExp(lbl + "[^0-9]*(0\.0*[1-9][0-9]*|[0-9]+\.?[0-9]*)", "i");
+    var m = full.match(r);
+    return m ? parseFloat(m[1]) : null;
   }
-  fill("fm-range-low", minP, "Min");
-  fill("fm-range-high", maxP, "Max");
-  fill("fm-price", price, "Price");
-  if (sym) { var se = document.getElementById("fm-sym"); if (se && !se.value) { se.value = sym; filled.push("Par: " + sym); } }
-  if (el) {
-    if (filled.length > 0) {
-      el.innerHTML = "<span style=\"color:var(--green)\">OK: " + filled.join(" | ") + "</span><br><span style=\"font-size:.6rem;color:var(--muted)\">Verifique e salve</span>";
-    } else {
-      el.innerHTML = "<span style=\"color:var(--orange)\">Nao leu. Preencha manualmente.<br>Texto: " + full.slice(0,100) + "</span>";
-    }
+  var minP = afterLbl("Min") || afterLbl("LOW") || afterLbl("lower");
+  var maxP = afterLbl("Max") || afterLbl("HIGH") || afterLbl("upper");
+  var price = afterLbl("Price") || afterLbl("Current") || afterLbl("price");
+  var posV = afterLbl("Position") || afterLbl("Value");
+  // Fallback: all numbers sorted
+  var raw = full.replace(/,/g,"").replace(/[$]/g,"");
+  var allN = []; var re = /\d+\.?\d*/g; var m;
+  while ((m = re.exec(raw)) !== null) { var n = parseFloat(m[0]); if (n > 0) allN.push(n); }
+  allN.sort(function(a,b){return a-b;});
+  var tiny = allN.filter(function(n){return n > 0 && n < 0.1;});
+  if (!minP && tiny.length >= 1) minP = tiny[0];
+  if (!maxP && tiny.length >= 2) maxP = tiny[tiny.length-1];
+  if (!price && minP && maxP) price = (minP+maxP)/2;
+  // Tokens
+  var tRe = /\b(HYPE|ETH|BTC|SOL|USDC|USDT|WETH|ARB|OP|AVAX|JUP|BONK|WIF|UPUMP|PEPE|LINK|UNI|WBTC)\b/g;
+  var toks=[]; var tm; while((tm=tRe.exec(full.toUpperCase()))!==null) toks.push(tm[1]);
+  var sym=toks.filter(function(v,i,a){return a.indexOf(v)===i;}).slice(0,2).join("/");
+  // Fill fields
+  var filled=[];
+  function fill(id,val,lbl){
+    if(val===null||isNaN(val))return;
+    var e2=document.getElementById(id);if(!e2)return;
+    var dec=val<0.001?8:val<1?6:val<100?4:2;
+    e2.value=parseFloat(val.toFixed(dec));
+    filled.push(lbl+": "+e2.value);
+  }
+  fill("fm-range-low",minP,"Min");
+  fill("fm-range-high",maxP,"Max");
+  fill("fm-price",price,"Price");
+  if(posV){fill("fm-pos-value",posV,"Posicao");}
+  if(sym){var se=document.getElementById("fm-sym");if(se&&!se.value){se.value=sym;filled.push("Par: "+sym);}}
+  if(!el)return;
+  if(filled.length>0){
+    el.innerHTML="<span style=\"color:var(--green)\">OK: "+filled.join(" | ")+"</span><br><span style=\"font-size:.6rem;color:var(--muted)\">Verifique e salve</span>";
+  } else {
+    // Show detected values as copyable chips
+    var chips="";
+    var det={Min:minP,Max:maxP,Price:price};
+    Object.keys(det).forEach(function(k){
+      if(det[k]!==null&&!isNaN(det[k])){
+        var v=parseFloat(det[k].toFixed(det[k]<0.001?8:det[k]<1?6:4));
+        chips+="<button onclick=\"(function(){var f=document.getElementById('fm-range-"+(k==="Min"?"low":k==="Max"?"high":"price")+"');if(f)f.value='"+v+"';this.style.background='var(--green)';})();\" style=\"margin:.15rem;padding:.25rem .5rem;background:rgba(59,158,255,.15);border:1px solid rgba(59,158,255,.3);color:var(--cyan);border-radius:5px;font-size:.68rem;cursor:pointer\">"+k+": "+v+"</button>";
+      }
+    });
+    el.innerHTML=(chips?"<div style=\"margin-bottom:.3rem;font-size:.68rem;color:var(--muted)\">Clique para copiar para o campo:</div>"+chips:"")+"<div style=\"font-size:.62rem;color:var(--muted);margin-top:.3rem\">Texto: "+full.slice(0,120)+"</div>";
   }
 }
 
