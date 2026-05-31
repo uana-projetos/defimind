@@ -4716,6 +4716,42 @@ if ('caches' in window) {
 
 
 // ── Pool Screenshot Helper com OCR (Tesseract.js) ─────────────────
+function fmPreprocess(src, cb) {
+  // Preprocess: scale 2x, invert dark bg, boost contrast
+  var imgEl = new Image();
+  imgEl.onload = function() {
+    var cv2 = document.createElement('canvas');
+    var scale = 2.5;
+    cv2.width = imgEl.width * scale;
+    cv2.height = imgEl.height * scale;
+    var cx2 = cv2.getContext('2d');
+    // Scale up
+    cx2.drawImage(imgEl, 0, 0, cv2.width, cv2.height);
+    // Invert + contrast for dark UIs
+    var id = cx2.getImageData(0, 0, cv2.width, cv2.height);
+    var data = id.data;
+    var avg = 0;
+    for (var i=0;i<data.length;i+=4) avg += (data[i]+data[i+1]+data[i+2])/3;
+    avg /= (data.length/4);
+    // If dark background, invert
+    if (avg < 128) {
+      for (var j=0;j<data.length;j+=4) {
+        data[j]=255-data[j]; data[j+1]=255-data[j+1]; data[j+2]=255-data[j+2];
+      }
+    }
+    // Increase contrast
+    var factor = 1.8;
+    for (var k=0;k<data.length;k+=4) {
+      data[k]   = Math.min(255, Math.max(0, factor*(data[k]-128)+128));
+      data[k+1] = Math.min(255, Math.max(0, factor*(data[k+1]-128)+128));
+      data[k+2] = Math.min(255, Math.max(0, factor*(data[k+2]-128)+128));
+    }
+    cx2.putImageData(id, 0, 0);
+    cb(cv2.toDataURL('image/png'));
+  };
+  imgEl.src = src;
+}
+
 function fmReadImg(src) {
   var img = document.getElementById('fm-img');
   var prev = document.getElementById('fm-prev');
@@ -4723,66 +4759,520 @@ function fmReadImg(src) {
   if (!img || !prev) return;
   img.src = src;
   prev.style.display = '';
-  if (nums) nums.innerHTML = '<span style="color:var(--cyan)">🔍 Lendo dados do print...</span>';
+  if (nums) nums.innerHTML = '<span style="color:var(--cyan)">🔍 Processando imagem...</span>';
 
-  // Run OCR with Tesseract
   if (typeof Tesseract === 'undefined') {
     if (nums) nums.innerHTML = '<span style="color:var(--muted)">✓ Print carregado — preencha os campos abaixo</span>';
     return;
   }
 
-  Tesseract.recognize(src, 'eng', { logger: function(){} }).then(function(result) {
-    var text = result.data.text;
-    fmParseOCR(text, nums);
-  }).catch(function() {
-    if (nums) nums.innerHTML = '<span style="color:var(--muted)">✓ Print carregado — preencha os campos abaixo</span>';
+  // Preprocess then OCR
+  fmPreprocess(src, function(processed) {
+    if (nums) nums.innerHTML = '<span style="color:var(--cyan)">🔍 Lendo texto...</span>';
+    Tesseract.recognize(processed, 'eng', {
+      logger: function(){},
+      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,%$/-: '
+    }).then(function(result) {
+      fmParseOCR(result.data.text, nums);
+    }).catch(function() {
+      if (nums) nums.innerHTML = '<span style="color:var(--muted)">✓ Print carregado — preencha manualmente</span>';
+    });
   });
 }
 
 function fmParseOCR(text, numsEl) {
-  // Extract all numbers (prices, percentages)
-  var numbers = [];
-  var raw = text.replace(/,/g,'').replace(/\$/g,'');
-  var matches = raw.match(/\d+\.?\d*/g) || [];
-  matches.forEach(function(m) { var n = parseFloat(m); if (n > 0) numbers.push(n); });
-  numbers.sort(function(a,b){return a-b;});
-
-  // Extract percentages for APY
-  var pcts = (text.match(/(\d+\.?\d*)\s*%/g)||[]).map(function(p){ return parseFloat(p); }).filter(function(p){ return p > 0 && p < 1000; });
-
-  // Extract token symbols
-  var tknMatch = text.match(/\b(ETH|BTC|SOL|USDC|USDT|WETH|wBTC|stETH|wstETH|ARB|OP|MATIC|AVAX|JUP|JTO|BONK|WIF|HYPE)\b/g);
-  var symbol = tknMatch ? [...new Set(tknMatch)].join('/') : '';
-
-  // Best guesses for range
-  var priceNums = numbers.filter(function(n){ return n > 0.0001 && n < 10000000; });
-  var minPrice = priceNums.length >= 2 ? priceNums[0] : null;
-  var maxPrice = priceNums.length >= 2 ? priceNums[priceNums.length-1] : null;
-  var currentPrice = priceNums.length >= 3 ? priceNums[Math.floor(priceNums.length/2)] : (maxPrice ? (minPrice+maxPrice)/2 : null);
-  var apy = pcts.length ? Math.max.apply(null, pcts) : null;
-
-  // Auto-fill form fields
   var filled = [];
-  function fill(id, val, label) {
-    var el = document.getElementById(id);
-    if (el && val !== null && !isNaN(val)) { el.value = parseFloat(val.toFixed(val < 1 ? 6 : 2)); filled.push(label+': '+el.value); }
-  }
-  fill('fm-range-low', minPrice, 'Min');
-  fill('fm-range-high', maxPrice, 'Max');
-  fill('fm-price', currentPrice, 'Preço');
-  fill('fm-apy', apy, 'APY');
-  if (symbol) {
-    var symEl = document.getElementById('fm-sym');
-    if (symEl && !symEl.value) { symEl.value = symbol; filled.push('Par: '+symbol); }
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  var fullText = lines.join(' ');
+
+  // Helper: extract first number after a keyword
+  function afterLabel(kw) {
+    var re = new RegExp(kw+'[^0-9]*(0\.0*[1-9][0-9]*|[0-9]+\.?[0-9]*)','i');
+    var m = fullText.match(re);
+    return m ? parseFloat(m[1]) : null;
   }
 
-  // Show result
-  if (numsEl) {
-    if (filled.length > 0) {
-      numsEl.innerHTML = '<span style="color:var(--green)">✓ Dados detectados e preenchidos:</span><br><span style="font-family:monospace;font-size:.65rem;color:var(--cyan)">'+filled.join(' · ')+'</span><br><span style="font-size:.6rem;color:var(--muted)">Verifique e ajuste se necessário</span>';
-    } else {
-      numsEl.innerHTML = '<span style="color:var(--orange)">⚠ Não consegui ler os números — preencha manualmente</span><br><span style="font-size:.6rem;color:var(--muted)">Tente um print mais claro ou com zoom maior</span>';
+  // Extract ALL numbers including very small ones (0.000046881)
+  var numRe = /d+.?d*/g;
+  var raw = fullText.replace(/,/g,'').replace(/[$]/g,'');
+  var allNums = [];
+  var nm; while((nm=numRe.exec(raw))!==null){ var nv=parseFloat(nm[0]); if(nv>0) allNums.push(nv); }
+  allNums.sort(function(a,b){return a-b;});
+
+  // Try labeled extraction first
+  var minPrice = afterLabel('Min') || afterLabel('min') || afterLabel('LOW');
+  var maxPrice = afterLabel('Max') || afterLabel('max') || afterLabel('HIGH');
+  var curPrice = afterLabel('Price') || afterLabel('price') || afterLabel('Current');
+  var posVal   = afterLabel('Position') || afterLabel('Value') || afterLabel('\
+
+function fmFile(e) {
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev){ fmReadImg(ev.target.result); };
+  r.readAsDataURL(f);
+}
+function fmDrop(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev){ fmReadImg(ev.target.result); };
+  r.readAsDataURL(f);
+}
+document.addEventListener('paste', function(e) {
+  var modal = document.getElementById('addModal');
+  if (!modal) return;
+  var items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (var i=0; i<items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      var blob = items[i].getAsFile();
+      var r = new FileReader();
+      r.onload = function(ev){ fmReadImg(ev.target.result); };
+      r.readAsDataURL(blob);
+      break;
     }
+  }
+});
+// ── Service Worker (PWA) + detecção de update
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/defimind/sw.js')
+      .then(reg => {
+        console.log('[DefiMind] SW v1.8.0 registrado:', reg.scope);
+
+        function showSwUpdateBar() {
+          const bar = document.getElementById('sw-update-bar');
+          if (bar) bar.classList.add('show');
+        }
+
+        if (reg.waiting) showSwUpdateBar();
+
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              showSwUpdateBar();
+            }
+          });
+        });
+
+        // Após skipWaiting, recarrega para pegar nova versão
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      })
+      .catch(e => console.log('[DefiMind] SW error:', e));
+  });
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhatsNew(); closePanel(); } });
+
+</script>
+
+<!-- ── SW Update Bar (aparece quando há nova versão publicada) -->
+<div id="sw-update-bar">
+  <div class="upd-txt">🚀 <strong>Atualização disponível!</strong> <span>Nova versão do DefiMind foi publicada</span></div>
+  <button class="btn-upd" onclick="applySwUpdate()">Atualizar agora</button>
+  <button class="btn-later" onclick="dismissSwUpdate()">Depois</button>
+</div>
+
+<!-- ── "O que há de novo" Modal -->
+<div id="whats-new-bg" onclick="if(event.target===this)closeWhatsNew()">
+  <div id="whats-new-modal">
+    <h3>🚀 O que há de novo <span class="wn-version">v1.8.0</span></h3>
+    <div class="wn-date">Atualizado em Mai 2026</div>
+    <div id="whats-new-entries"></div>
+    <div class="wn-footer">
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.78rem">Fechar</button>
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:var(--cyan);border:none;color:#000;font-weight:700;cursor:pointer;font-size:.78rem">Entendido! 🎉</button>
+    </div>
+  </div>
+</div>
+
+<button id="donate-btn" onclick="openDonateModal()" title="Apoiar o projeto DefiMind"
+  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;height:40px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:all .25s ease;display:flex;align-items:center;justify-content:center;padding:.4rem .9rem;gap:.3rem;white-space:nowrap"
+  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+  ☕ <span class="donate-label">Apoiar</span>
+</button>
+</script>
+
+<!-- ── SW Update Bar (aparece quando há nova versão publicada) -->
+<div id="sw-update-bar">
+  <div class="upd-txt">🚀 <strong>Atualização disponível!</strong> <span>Nova versão do DefiMind foi publicada</span></div>
+  <button class="btn-upd" onclick="applySwUpdate()">Atualizar agora</button>
+  <button class="btn-later" onclick="dismissSwUpdate()">Depois</button>
+</div>
+
+<!-- ── "O que há de novo" Modal -->
+<div id="whats-new-bg" onclick="if(event.target===this)closeWhatsNew()">
+  <div id="whats-new-modal">
+    <h3>🚀 O que há de novo <span class="wn-version">v1.8.0</span></h3>
+    <div class="wn-date">Atualizado em Mai 2026</div>
+    <div id="whats-new-entries"></div>
+    <div class="wn-footer">
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.78rem">Fechar</button>
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:var(--cyan);border:none;color:#000;font-weight:700;cursor:pointer;font-size:.78rem">Entendido! 🎉</button>
+    </div>
+  </div>
+</div>
+
+<button id="donate-btn" onclick="openDonateModal()" title="Apoiar o projeto DefiMind"
+  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;height:40px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:all .25s ease;display:flex;align-items:center;justify-content:center;padding:.4rem .9rem;gap:.3rem;white-space:nowrap"
+  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+  ☕ <span class="donate-label">Apoiar</span>
+</button>
+<script>
+(function(){
+  var btn = document.getElementById('donate-btn');
+  if(!btn) return;
+  // Pulse on first visit for 6 seconds to draw attention
+  var seen = localStorage.getItem('donate_seen');
+  if(!seen){
+    btn.classList.add('pulsing');
+    setTimeout(function(){
+      btn.classList.remove('pulsing');
+      localStorage.setItem('donate_seen','1');
+    }, 6000);
+  }
+  // On click mark as seen
+  btn.addEventListener('click', function(){
+    btn.classList.remove('pulsing');
+    localStorage.setItem('donate_seen','1');
+  });
+})();
+</script>
+
+<!-- SW Update Bar -->
+<div id="sw-update-bar">
+  <div class="upd-txt">&#x1F680; <strong>Atualizacao disponivel!</strong> <span>Nova versao do DefiMind foi publicada</span></div>
+  <button class="btn-upd" onclick="applySwUpdate()">Atualizar agora</button>
+  <button class="btn-later" onclick="dismissSwUpdate()">Depois</button>
+</div>
+
+<!-- O que ha de novo Modal -->
+<div id="whats-new-bg" onclick="if(event.target===this)closeWhatsNew()">
+  <div id="whats-new-modal">
+    <h3>&#x1F680; O que ha de novo <span class="wn-version">v2.1.0</span></h3>
+    <div class="wn-date">Atualizado em Mai 2026</div>
+    <div id="whats-new-entries"></div>
+    <div class="wn-footer">
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.78rem">Fechar</button>
+      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:var(--cyan);border:none;color:#000;font-weight:700;cursor:pointer;font-size:.78rem">Entendido!</button>
+    </div>
+  </div>
+</div>
+
+<button id="donate-btn" onclick="openDonateModal()" title="Apoiar o projeto DefiMind"
+  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;height:40px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:all .25s ease;display:flex;align-items:center;justify-content:center;padding:.4rem .9rem;gap:.3rem;white-space:nowrap"
+  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+  &#9749; <span class="donate-label">Apoiar</span>
+</button>
+
+<style>
+#wallet-hdr:hover{background:rgba(59,158,255,.1)}
+#wallet-hdr.connected{border-color:var(--cyan);background:rgba(59,158,255,.07)}
+.tab-btn.active svg{stroke:var(--cyan)}
+.wnet-btn{padding:.28rem .6rem;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.wnet-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(59,158,255,.1)}
+.wscan-item{display:flex;align-items:center;gap:.45rem;padding:.28rem .45rem;border-radius:6px;background:rgba(255,255,255,.03);margin:.18rem 0;font-size:.72rem;cursor:pointer;transition:background .12s}
+.wscan-item:hover{background:rgba(59,158,255,.08)}
+</style>
+<script>
+// Enhanced wallet system
+window._wnet = 'auto';
+function pickNet(net) {
+  window._wnet = net;
+  document.querySelectorAll('.wnet-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.net === net); });
+}
+function autoDetectNet(addr) {
+  var h = document.getElementById('wnet-hint');
+  if (!h) return;
+  if (addr.startsWith('0x') && addr.length === 42) {
+    h.innerHTML = '<span style="color:#627eea">EVM detectado</span>';
+    pickNet('evm');
+  } else if (addr.length >= 32 && addr.length <= 44 && !addr.startsWith('0x')) {
+    h.innerHTML = '<span style="color:#9945ff">Solana detectado</span>';
+    pickNet('solana');
+  } else {
+    h.textContent = addr.length > 4 ? 'Aguardando endereco completo...' : '';
+  }
+}
+function updateWalletBadge() {
+  var n = getWallets().length;
+  var badge = document.getElementById('wbadge');
+  var lbl = document.getElementById('wlbl');
+  var btn = document.getElementById('wallet-hdr');
+  if (!badge) return;
+  if (n > 0) {
+    badge.style.display = 'inline'; badge.textContent = n;
+    if (lbl) lbl.textContent = n === 1 ? '1 carteira' : n + ' carteiras';
+    if (btn) btn.classList.add('connected');
+  } else {
+    badge.style.display = 'none';
+    if (lbl) lbl.textContent = 'Carteira';
+    if (btn) btn.classList.remove('connected');
+  }
+}
+function buildWCard(w, i) {
+  var nc = {evm:'#627eea',solana:'#9945ff',hyperliquid:'#00d4ff'}[w.network] || 'var(--cyan)';
+  var nl = {evm:'EVM',solana:'Solana',hyperliquid:'Hyperliquid'}[w.network] || 'Auto';
+  var addr = w.addr || w.address || '';
+  var s = addr.length > 14 ? addr.slice(0,7)+'...'+addr.slice(-5) : addr;
+  return '<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;margin-bottom:.4rem"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.45rem"><span style="width:7px;height:7px;border-radius:50%;background:'+nc+';display:inline-block"></span><span style="font-family:monospace;font-size:.73rem">'+s+'</span><span style="font-size:.6rem;color:'+nc+';background:'+nc+'22;padding:1px 6px;border-radius:99px">'+nl+'</span></div><button onclick="removeWallet('+i+')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem">&times;</button></div><div id="wscan-'+i+'"></div></div>';
+}
+function scanWalletOpps(i) {
+  var wallets = getWallets();
+  var w = wallets[i];
+  var el = document.getElementById('wscan-' + i);
+  if (!w || !el) return;
+  var net = w.network || 'auto';
+  var checks = JSON.parse(localStorage.getItem('airdropChecks') || '{}');
+  var rel = (typeof AIRDROPS !== 'undefined' ? AIRDROPS : []).filter(function(a){
+    if (net === 'solana') return a.chain.indexOf('Solana') >= 0;
+    if (net === 'hyperliquid') return a.chain.indexOf('Hyperliquid') >= 0;
+    return true;
+  }).slice(0, 2);
+  var allPools = typeof POOLS !== 'undefined' ? Object.values(POOLS).flat() : [];
+  var chainMap = {evm:'Ethereum',solana:'Solana',hyperliquid:'Hyperliquid'};
+  var topPool = allPools.filter(function(p){ return p.chain === (chainMap[net] || 'Ethereum'); }).sort(function(a,b){ return b.apy-a.apy; })[0];
+  var html = '<div style="border-top:1px solid var(--border);margin-top:.35rem;padding-top:.35rem"><div style="font-size:.61rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.3rem">Oportunidades</div>';
+  rel.forEach(function(a){
+    var done = (checks[a.id] || []).length;
+    var pct = Math.round(done / a.tasks.length * 100);
+    var dot = a.status === 'hot' ? '#ef4444' : '#34d399';
+    html += '<div class="wscan-item" onclick="showTab(\'airdrops\');closePanel()"><span style="width:6px;height:6px;border-radius:50%;background:'+dot+';flex-shrink:0"></span><span style="flex:1">'+a.name+'</span><span style="color:var(--cyan);font-size:.65rem">'+pct+'% feito</span></div>';
+  });
+  if (topPool) {
+    html += '<div class="wscan-item" onclick="showTab(\'pools\');closePanel()"><span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0"></span><span style="flex:1">'+topPool.symbol+'</span><span style="color:var(--cyan);font-weight:700;font-size:.65rem">'+topPool.apy.toFixed(1)+'% APY</span></div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+// Override openWalletModal with enhanced version
+openWalletModal = function() {
+  var wallets = getWallets();
+  var listHtml = wallets.length === 0
+    ? '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:.6rem 0">Nenhuma carteira conectada.</div>'
+    : wallets.map(function(w,i){ return buildWCard(w,i); }).join('');
+
+  openModal('<div class="modal" style="max-width:480px;width:95vw">'
+    + '<h3 style="font-size:.95rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem">'
+    + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>'
+    + 'Carteiras Read-Only</h3>'
+    + '<p style="font-size:.71rem;color:var(--muted);margin-bottom:.65rem">Endereco publico apenas &mdash; sem chave privada.</p>'
+    + '<input id="waddr" type="text" placeholder="0x... ou endereco Solana" oninput="autoDetectNet(this.value)"'
+    + ' style="width:100%;box-sizing:border-box;background:var(--input);border:1px solid var(--border);border-radius:7px;padding:.45rem .7rem;color:var(--text);font-size:.76rem;font-family:monospace;outline:none;margin-bottom:.35rem">'
+    + '<div style="font-size:.62rem;color:var(--muted);margin-bottom:.28rem;text-transform:uppercase;letter-spacing:.4px">Rede</div>'
+    + '<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.35rem">'
+    + '<button class="wnet-btn active" data-net="auto" onclick="pickNet(\'auto\')">Auto</button>'
+    + '<button class="wnet-btn" data-net="evm" onclick="pickNet(\'evm\')" style="color:#627eea">EVM</button>'
+    + '<button class="wnet-btn" data-net="solana" onclick="pickNet(\'solana\')" style="color:#9945ff">Solana</button>'
+    + '<button class="wnet-btn" data-net="hyperliquid" onclick="pickNet(\'hyperliquid\')" style="color:#00d4ff">Hyperliquid</button>'
+    + '</div>'
+    + '<div id="wnet-hint" style="font-size:.67rem;color:var(--muted);min-height:.85rem;margin-bottom:.45rem"></div>'
+    + '<button class="btn btn-primary" onclick="addWalletNew()" style="width:100%;margin-bottom:.85rem">+ Conectar carteira</button>'
+    + '<div id="wlist">' + listHtml + '</div>'
+    + '<div style="margin-top:1rem;text-align:right"><button class="btn" onclick="closeModal()">Fechar</button></div>'
+    + '</div>');
+
+  updateWalletBadge();
+  wallets.forEach(function(_,i){ setTimeout(function(){ scanWalletOpps(i); }, 300 + i*150); });
+};
+function addWalletNew() {
+  var addr = (document.getElementById('waddr') ? document.getElementById('waddr').value : '').trim();
+  if (!addr) return;
+  var network = window._wnet || 'auto';
+  if (network === 'auto') {
+    if (addr.startsWith('0x') && addr.length === 42) network = 'evm';
+    else if (addr.length >= 32 && addr.length <= 44) network = 'solana';
+  }
+  var wallets = getWallets();
+  if (wallets.find(function(w){ return (w.addr||w.address) === addr; })) { alert('Ja conectada.'); return; }
+  wallets.push({ addr: addr, address: addr, network: network, addedAt: Date.now() });
+  saveWallets(wallets);
+  renderWalletBanners();
+  updateTabBadges();
+  updateWalletBadge();
+  window._wnet = 'auto';
+  closeModal();
+  setTimeout(openWalletModal, 50);
+}
+// Override addWallet too
+addWallet = addWalletNew;
+// Override removeWallet
+var _origRemoveWallet = removeWallet;
+removeWallet = function(idx) {
+  var wallets = getWallets();
+  wallets.splice(idx, 1);
+  saveWallets(wallets);
+  renderWalletBanners();
+  updateTabBadges();
+  updateWalletBadge();
+  closeModal();
+  setTimeout(openWalletModal, 50);
+};
+
+// ── Smart Wallet Analysis ─────────────────────────────────────────────────────
+// Uses DefiLlama portfolio API to suggest features already in the app
+async function analyzeWalletPortfolio(walletIdx) {
+  var wallets = getWallets();
+  var w = wallets[walletIdx];
+  var el = document.getElementById('wscan-' + walletIdx);
+  if (!w || !el) return;
+  var addr = w.addr || w.address || '';
+  var net  = w.network || 'auto';
+  el.innerHTML = '<div style="font-size:.68rem;color:var(--muted);padding:.3rem 0">Analisando carteira...</div>';
+
+  var portfolio = null;
+  if (addr.startsWith('0x')) {
+    try {
+      var res = await fetch('https://api.llama.fi/portfolio/' + addr, { signal: AbortSignal.timeout(6000) });
+      if (res.ok) portfolio = await res.json();
+    } catch(e) {}
+  }
+
+  var protocols = new Set();
+  var chains = new Set();
+  var totalUsd = 0;
+  if (portfolio && portfolio.protocols) {
+    portfolio.protocols.forEach(function(p) {
+      if (p.chain) chains.add(p.chain.toLowerCase());
+      if (p.name) protocols.add(p.name.toLowerCase());
+      if (p.tvl) totalUsd += p.tvl;
+    });
+  }
+
+  // Detect target chain
+  var isSol = chains.has('solana') || net === 'solana';
+  var isHL  = chains.has('hyperliquid') || net === 'hyperliquid';
+  var targetChain = isSol ? 'Solana' : isHL ? 'Hyperliquid' : 'Ethereum';
+
+  var suggestions = [];
+  var checks = JSON.parse(localStorage.getItem('airdropChecks') || '{}');
+
+  // Portfolio value
+  if (totalUsd > 0) {
+    suggestions.push({ icon: 'P', color: '#34d399',
+      text: 'Portfolio: $' + (totalUsd >= 1000 ? (totalUsd/1000).toFixed(1)+'K' : totalUsd.toFixed(0)),
+      sub: Array.from(chains).join(' · ') || targetChain, action: null });
+  }
+
+  // Airdrops pending
+  var airs = (typeof AIRDROPS !== 'undefined' ? AIRDROPS : []).filter(function(a){
+    if (isSol) return a.chain.indexOf('Solana') >= 0;
+    if (isHL)  return a.chain.indexOf('Hyperliquid') >= 0;
+    return true;
+  }).filter(function(a){ return (checks[a.id]||[]).length < a.tasks.length; }).slice(0,2);
+  if (airs.length > 0) {
+    suggestions.push({ icon: 'A', color: '#a855f7',
+      text: airs.length + ' airdrop(s) pendente(s)',
+      sub: airs.map(function(a){ return a.name; }).join(', '),
+      action: "showTab('airdrops');closePanel()" });
+  }
+
+  // Best pool for chain
+  var allPools = typeof POOLS !== 'undefined' ? Object.values(POOLS).flat() : [];
+  var top = allPools.filter(function(p){ return p.chain === targetChain; }).sort(function(a,b){ return b.apy-a.apy; })[0];
+  if (top) {
+    suggestions.push({ icon: 'Y', color: 'var(--cyan)',
+      text: 'Yield em ' + targetChain + ': ' + top.symbol,
+      sub: top.apy.toFixed(1) + '% APY — ' + (top.project||''),
+      action: "showTab('pools');closePanel()" });
+  }
+
+  // Lending detected
+  var lend = ['aave','compound','morpho','kamino','drift','euler','marginfi','hyperlend'];
+  var hasLend = Array.from(protocols).some(function(p){ return lend.some(function(l){ return p.indexOf(l)>=0; }); });
+  var myLoans = JSON.parse(localStorage.getItem('defiLoans')||'[]');
+  if (hasLend && myLoans.length === 0) {
+    suggestions.push({ icon: 'L', color: '#f59e0b',
+      text: 'Emprestimo detectado — monitore o HF',
+      sub: 'Adicione na aba Emprestimos para alertas de liquidacao',
+      action: "showTab('loans');closePanel()" });
+  }
+
+  // Fallback
+  if (suggestions.length === 0) {
+    suggestions.push({ icon: 'Y', color: 'var(--cyan)', text: 'Melhores pools no app', sub: 'Aba Pools → yields ao vivo', action: "showTab('pools');closePanel()" });
+    suggestions.push({ icon: 'A', color: '#a855f7', text: 'Airdrops ativos', sub: 'Meteora, Axiom, Lighter e mais', action: "showTab('airdrops');closePanel()" });
+  }
+
+  // Render suggestions
+  var iconMap = {P:'📊',A:'🪂',Y:'💰',L:'⚠️'};
+  var html = '<div style="border-top:1px solid var(--border);margin-top:.4rem;padding-top:.4rem">';
+  html += '<div style="font-size:.61rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.3rem">Sugestoes para voce</div>';
+  suggestions.forEach(function(s) {
+    var ico = iconMap[s.icon] || s.icon;
+    html += '<div class="wscan-item"' + (s.action ? ' onclick="'+s.action+'"' : '') + ' style="' + (s.action?'cursor:pointer':'cursor:default') + '">'
+      + '<span style="font-size:.8rem;flex-shrink:0;width:16px;text-align:center">'+ico+'</span>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.text+'</div>'
+      + '<div style="font-size:.63rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.sub+'</div>'
+      + '</div>'
+      + (s.action ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' : '')
+      + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+// Replace simple scan with smart portfolio analysis
+scanWalletOpps = analyzeWalletPortfolio;
+
+// Init
+setTimeout(updateWalletBadge, 500);
+</script>
+</body>
+</html>
+);
+  var apy      = afterLabel('APR') || afterLabel('APY') || afterLabel('Yield');
+
+  // If labeled extraction failed, use positional approach
+  // For DeFi pool UIs: typically Min, then a bunch of 0.000... numbers, then Max
+  var tinyNums = allNums.filter(function(n){ return n > 0 && n < 0.01; });
+  var bigNums  = allNums.filter(function(n){ return n >= 1 && n < 100000; });
+
+  if (!minPrice && tinyNums.length >= 1) minPrice = tinyNums[0];
+  if (!maxPrice && tinyNums.length >= 2) maxPrice = tinyNums[tinyNums.length-1];
+  if (!curPrice && tinyNums.length >= 3) curPrice = tinyNums[Math.floor(tinyNums.length/2)];
+  if (!curPrice && minPrice && maxPrice) curPrice = (minPrice+maxPrice)/2;
+  if (!posVal && bigNums.length) posVal = bigNums[bigNums.length-1];
+
+  // Token symbols
+  var tknRe = /\b(HYPE|ETH|BTC|SOL|USDC|USDT|WETH|ARB|OP|MATIC|AVAX|JUP|JTO|BONK|WIF|UPUMP|PEPE|LINK|UNI)\b/g;
+  var tokens = []; var tm;
+  while((tm=tknRe.exec(fullText))!==null) tokens.push(tm[1]);
+  var symbol = [...new Set(tokens)].slice(0,2).join('/');
+
+  // Fill fields
+  function fill(id, val, label) {
+    if (val===null||isNaN(val)) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    var decimals = val < 0.001 ? 8 : val < 1 ? 6 : val < 100 ? 4 : 2;
+    el.value = parseFloat(val.toFixed(decimals));
+    filled.push(label+': '+el.value);
+  }
+
+  fill('fm-range-low',  minPrice, 'Min');
+  fill('fm-range-high', maxPrice, 'Max');
+  fill('fm-price',      curPrice, 'Price');
+  if (posVal) fill('fm-pos-value', posVal, 'Posição');
+  if (apy)    fill('fm-apy', apy, 'APY');
+  if (symbol) {
+    var se = document.getElementById('fm-sym');
+    if (se && !se.value) { se.value = symbol; filled.push('Par: '+symbol); }
+  }
+
+  // Show
+  if (!numsEl) return;
+  if (filled.length > 0) {
+    numsEl.innerHTML = '<span style="color:var(--green)">✓ Preenchido automaticamente:</span><br>'
+      + '<span style="font-family:monospace;font-size:.64rem;color:var(--cyan)">'+filled.join('  |  ')+'</span><br>'
+      + '<span style="font-size:.6rem;color:var(--muted)">Verifique os valores e salve</span>';
+  } else {
+    numsEl.innerHTML = '<span style="color:var(--orange)">⚠ Não detectei os campos.</span> '
+      + '<span style="font-size:.68rem;color:var(--muted)">Use um print com zoom maior e boa iluminação</span><br>'
+      + '<div style="font-size:.62rem;color:var(--muted);margin-top:.2rem">Texto lido: '+fullText.slice(0,120)+'</div>';
   }
 }
 
