@@ -5270,5 +5270,78 @@ function fmShowImg(src) {
   });
 }
 </script>
+
+<script>
+// Fix: show warning when stored price differs from live (manual price pools)
+// Patch renderMyPools to add price staleness warning and live link
+(function(){
+  var _origRP = typeof renderMyPools === "function" ? renderMyPools : null;
+  if (!_origRP) return;
+
+  function patchPoolCards() {
+    var cards = document.querySelectorAll(".my-pool-card");
+    var pools = typeof getMyPools === "function" ? getMyPools() : [];
+    cards.forEach(function(card, i) {
+      var pool = pools[i];
+      if (!pool) return;
+      var priceEl = card.querySelector(".pool-price");
+      var price = pool.currentPrice || pool.entryPrice || 0;
+      var lo = parseFloat(pool.rangeLow) || 0;
+      var hi = parseFloat(pool.rangeHigh) || 0;
+
+      // Check if price is actually out of range
+      var inRange = price > 0 && price >= lo && price <= hi;
+      var outRange = price > 0 && (price < lo || price > hi);
+
+      // Find or create warning element
+      var warnEl = card.querySelector(".price-stale-warn");
+      if (!warnEl) {
+        warnEl = document.createElement("div");
+        warnEl.className = "price-stale-warn";
+        warnEl.style.cssText = "font-size:.68rem;padding:.3rem .5rem;border-radius:6px;margin:.4rem 0;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap";
+        card.insertBefore(warnEl, card.querySelector(".pool-range-bar") || card.firstChild.nextSibling);
+      }
+
+      var protoLink = "";
+      if (pool.chain === "Hyperliquid") protoLink = "https://app.project-x.exchange/";
+      else if (pool.chain === "Solana") protoLink = "https://app.kamino.finance";
+      else if (pool.chain === "Ethereum" || pool.chain === "Arbitrum" || pool.chain === "Base") protoLink = "https://app.uniswap.org";
+
+      var linkHtml = protoLink ? " <a href=\"" + protoLink + "\" target=\"_blank\" style=\"color:var(--cyan);font-size:.65rem\">Ver live ↗</a>" : "";
+
+      if (outRange) {
+        // REAL: out of range — override status display
+        warnEl.style.background = "rgba(239,68,68,.12)";
+        warnEl.style.border = "1px solid rgba(239,68,68,.35)";
+        warnEl.innerHTML = "🔴 <span style=\"color:#ef4444;font-weight:700\">FORA DO RANGE</span> <span style=\"color:rgba(255,255,255,.5)\">— preço " + price.toFixed(price<0.001?8:4) + " < Min " + lo.toFixed(lo<0.001?8:4) + "</span>" + linkHtml + " <span style=\"color:rgba(255,255,255,.3);font-size:.6rem\">Clique Atualizar para corrigir</span>";
+        // Override any SAUDÁVEL badge
+        var badges = card.querySelectorAll("[class*=health], [class*=status]");
+        badges.forEach(function(b){
+          if (b.textContent.includes("SAUDÁVEL") || b.textContent.includes("50%")) {
+            b.innerHTML = "🔴 FORA DO RANGE";
+            b.style.color = "#ef4444";
+            b.style.borderColor = "#ef4444";
+          }
+        });
+      } else if (inRange) {
+        warnEl.style.background = "rgba(52,211,153,.06)";
+        warnEl.style.border = "1px solid rgba(52,211,153,.2)";
+        warnEl.innerHTML = "⚠️ <span style=\"color:rgba(255,255,255,.4)\">Preço armazenado — verifique se está atual." + linkHtml + "</span>";
+      } else {
+        warnEl.innerHTML = "";
+      }
+    });
+  }
+
+  // Run after renderMyPools
+  var _orig = renderMyPools;
+  renderMyPools = function() {
+    _orig();
+    setTimeout(patchPoolCards, 200);
+  };
+  // Also run on next tick if pools already rendered
+  setTimeout(patchPoolCards, 800);
+})();
+</script>
 </body>
 </html>
