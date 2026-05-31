@@ -425,6 +425,7 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 .community-rating{font-size:.7rem;color:var(--muted)}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -4714,31 +4715,90 @@ if ('caches' in window) {
 }
 
 
-// ── Pool Screenshot Helper (sem API Key) ──────────────────────────
-function fmShowImg(src) {
+// ── Pool Screenshot Helper com OCR (Tesseract.js) ─────────────────
+function fmReadImg(src) {
   var img = document.getElementById('fm-img');
   var prev = document.getElementById('fm-prev');
+  var nums = document.getElementById('fm-nums');
   if (!img || !prev) return;
   img.src = src;
   prev.style.display = '';
-  // Try to extract numbers from filename or alt (basic hint)
-  var nums = document.getElementById('fm-nums');
-  if (nums) nums.innerHTML = '<span style="color:var(--cyan)">✓ Print carregado</span> — use como referência para preencher Min/Max/Price abaixo.';
+  if (nums) nums.innerHTML = '<span style="color:var(--cyan)">🔍 Lendo dados do print...</span>';
+
+  // Run OCR with Tesseract
+  if (typeof Tesseract === 'undefined') {
+    if (nums) nums.innerHTML = '<span style="color:var(--muted)">✓ Print carregado — preencha os campos abaixo</span>';
+    return;
+  }
+
+  Tesseract.recognize(src, 'eng', { logger: function(){} }).then(function(result) {
+    var text = result.data.text;
+    fmParseOCR(text, nums);
+  }).catch(function() {
+    if (nums) nums.innerHTML = '<span style="color:var(--muted)">✓ Print carregado — preencha os campos abaixo</span>';
+  });
 }
+
+function fmParseOCR(text, numsEl) {
+  // Extract all numbers (prices, percentages)
+  var numbers = [];
+  var raw = text.replace(/,/g,'').replace(/\$/g,'');
+  var matches = raw.match(/\d+\.?\d*/g) || [];
+  matches.forEach(function(m) { var n = parseFloat(m); if (n > 0) numbers.push(n); });
+  numbers.sort(function(a,b){return a-b;});
+
+  // Extract percentages for APY
+  var pcts = (text.match(/(\d+\.?\d*)\s*%/g)||[]).map(function(p){ return parseFloat(p); }).filter(function(p){ return p > 0 && p < 1000; });
+
+  // Extract token symbols
+  var tknMatch = text.match(/\b(ETH|BTC|SOL|USDC|USDT|WETH|wBTC|stETH|wstETH|ARB|OP|MATIC|AVAX|JUP|JTO|BONK|WIF|HYPE)\b/g);
+  var symbol = tknMatch ? [...new Set(tknMatch)].join('/') : '';
+
+  // Best guesses for range
+  var priceNums = numbers.filter(function(n){ return n > 0.0001 && n < 10000000; });
+  var minPrice = priceNums.length >= 2 ? priceNums[0] : null;
+  var maxPrice = priceNums.length >= 2 ? priceNums[priceNums.length-1] : null;
+  var currentPrice = priceNums.length >= 3 ? priceNums[Math.floor(priceNums.length/2)] : (maxPrice ? (minPrice+maxPrice)/2 : null);
+  var apy = pcts.length ? Math.max.apply(null, pcts) : null;
+
+  // Auto-fill form fields
+  var filled = [];
+  function fill(id, val, label) {
+    var el = document.getElementById(id);
+    if (el && val !== null && !isNaN(val)) { el.value = parseFloat(val.toFixed(val < 1 ? 6 : 2)); filled.push(label+': '+el.value); }
+  }
+  fill('fm-range-low', minPrice, 'Min');
+  fill('fm-range-high', maxPrice, 'Max');
+  fill('fm-price', currentPrice, 'Preço');
+  fill('fm-apy', apy, 'APY');
+  if (symbol) {
+    var symEl = document.getElementById('fm-sym');
+    if (symEl && !symEl.value) { symEl.value = symbol; filled.push('Par: '+symbol); }
+  }
+
+  // Show result
+  if (numsEl) {
+    if (filled.length > 0) {
+      numsEl.innerHTML = '<span style="color:var(--green)">✓ Dados detectados e preenchidos:</span><br><span style="font-family:monospace;font-size:.65rem;color:var(--cyan)">'+filled.join(' · ')+'</span><br><span style="font-size:.6rem;color:var(--muted)">Verifique e ajuste se necessário</span>';
+    } else {
+      numsEl.innerHTML = '<span style="color:var(--orange)">⚠ Não consegui ler os números — preencha manualmente</span><br><span style="font-size:.6rem;color:var(--muted)">Tente um print mais claro ou com zoom maior</span>';
+    }
+  }
+}
+
 function fmFile(e) {
   var f = e.target.files[0]; if (!f) return;
   var r = new FileReader();
-  r.onload = function(ev){ fmShowImg(ev.target.result); };
+  r.onload = function(ev){ fmReadImg(ev.target.result); };
   r.readAsDataURL(f);
 }
 function fmDrop(e) {
   e.preventDefault();
   var f = e.dataTransfer.files[0]; if (!f) return;
   var r = new FileReader();
-  r.onload = function(ev){ fmShowImg(ev.target.result); };
+  r.onload = function(ev){ fmReadImg(ev.target.result); };
   r.readAsDataURL(f);
 }
-// Ctrl+V paste support for pool modal
 document.addEventListener('paste', function(e) {
   var modal = document.getElementById('addModal');
   if (!modal) return;
@@ -4748,7 +4808,7 @@ document.addEventListener('paste', function(e) {
     if (items[i].type.indexOf('image') !== -1) {
       var blob = items[i].getAsFile();
       var r = new FileReader();
-      r.onload = function(ev){ fmShowImg(ev.target.result); };
+      r.onload = function(ev){ fmReadImg(ev.target.result); };
       r.readAsDataURL(blob);
       break;
     }
