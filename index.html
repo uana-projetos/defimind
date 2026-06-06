@@ -730,6 +730,30 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
     <div id="hl-spot-table"></div>
   </div>
 
+  <!-- HyperEVM Protocols -->
+  <div class="hl-section-card" style="margin-top:1rem">
+    <div class="hl-section-header" style="background:linear-gradient(90deg,rgba(244,114,182,.06),transparent)">
+      <span class="hl-section-icon">&#9889;</span>
+      <span class="hl-section-title" style="color:var(--hype)">HyperEVM — Protocolos DeFi</span>
+      <span class="hl-badge">TVL ao vivo</span>
+      <span id="hl-evm-ts" style="font-size:.6rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+    <div id="hl-evm-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem;padding:.75rem 1rem;border-bottom:1px solid var(--border)"></div>
+    <div id="hl-evm-table"></div>
+  </div>
+
+  <!-- HYPE Staking / Validators -->
+  <div class="hl-section-card" style="margin-top:1rem">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">&#128274;</span>
+      <span class="hl-section-title">HYPE Staking — Validators</span>
+      <span class="hl-badge" style="background:rgba(167,139,250,.15);color:var(--purple)">APY em tempo real</span>
+      <span id="hl-staking-ts" style="font-size:.6rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+    <div id="hl-staking-info" style="padding:.6rem 1rem;border-bottom:1px solid var(--border);font-size:.75rem;color:var(--muted);display:flex;gap:1.5rem;flex-wrap:wrap"></div>
+    <div id="hl-staking-table"></div>
+  </div>
+
 </div>
 <div id="pwa-banner">
   <span style="font-size:1.3rem">🧠</span>
@@ -6238,8 +6262,210 @@ function updateHLSummary() {
 }
 
 // ── Refresh all ───────────────────────────────────────────────────
+// ─── HyperEVM Protocols (DefiLlama) ─────────────────────────────────────────
+const HYPER_EVM_PROTOCOLS = [
+  { slug: 'kinetiq',      name: 'Kinetiq',     cat: 'Liquid Staking', link: 'https://kinetiq.xyz',    icon: '🔷' },
+  { slug: 'hyperlend',    name: 'HyperLend',   cat: 'Lending',        link: 'https://hyperlend.finance',icon: '🏦' },
+  { slug: 'felix-vaults', name: 'Felix',        cat: 'Stablecoin',     link: 'https://felix.finance',  icon: '🐱' },
+  { slug: 'hyperswap',    name: 'HyperSwap',   cat: 'DEX',            link: 'https://hyperswap.exchange',icon: '🔄' },
+  { slug: 'hypurrfi',     name: 'HypurrFi',    cat: 'Yield',          link: 'https://hypurr.fi',      icon: '⚡' },
+  { slug: 'laminar',      name: 'Laminar',     cat: 'Perps',          link: 'https://laminar.finance',icon: '🌊' },
+  { slug: 'timeswap',     name: 'Timeswap',    cat: 'Options',        link: 'https://timeswap.io',    icon: '⏱️' },
+];
+
+async function loadHLEvm() {
+  const el = document.getElementById('hl-evm-table');
+  const sumEl = document.getElementById('hl-evm-summary');
+  const tsEl = document.getElementById('hl-evm-ts');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">⏳ Carregando protocolos HyperEVM...</div>';
+  sumEl.innerHTML = '';
+
+  try {
+    const results = await Promise.all(HYPER_EVM_PROTOCOLS.map(async p => {
+      try {
+        const r = await fetch(`https://api.llama.fi/protocol/${p.slug}`, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        // Pega TVL da chain HyperEVM ou total
+        let tvl = d.currentChainTvls?.HyperEVM ?? d.currentChainTvls?.Hyperliquid ?? d.tvl ?? 0;
+        // Variação 24h
+        let tvl24hAgo = tvl;
+        if (d.chainTvls?.HyperEVM?.tvl?.length >= 2) {
+          const arr = d.chainTvls.HyperEVM.tvl;
+          tvl24hAgo = arr[arr.length - 2]?.totalLiquidityUSD ?? tvl;
+        } else if (d.tvl?.length >= 2) {
+          tvl24hAgo = d.tvl[d.tvl.length - 2]?.totalLiquidityUSD ?? tvl;
+        }
+        const change24h = tvl24hAgo > 0 ? ((tvl - tvl24hAgo) / tvl24hAgo) * 100 : 0;
+        return { ...p, tvl, change24h };
+      } catch(e) {
+        return { ...p, tvl: null, change24h: null };
+      }
+    }));
+
+    // Ordena por TVL
+    results.sort((a, b) => (b.tvl ?? 0) - (a.tvl ?? 0));
+    const totalTvl = results.reduce((s, r) => s + (r.tvl ?? 0), 0);
+
+    // Summary cards
+    sumEl.innerHTML = `
+      <div style="background:var(--hover);border-radius:.5rem;padding:.5rem .75rem">
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">TVL Total HyperEVM</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--hype)">$${fmt2(totalTvl)}</div>
+      </div>
+      <div style="background:var(--hover);border-radius:.5rem;padding:.5rem .75rem">
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Protocolos Ativos</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--green)">${results.filter(r=>r.tvl>0).length}</div>
+      </div>
+      <div style="background:var(--hover);border-radius:.5rem;padding:.5rem .75rem">
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Maior Protocolo</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--text)">${results[0]?.name ?? '-'}</div>
+        <div style="font-size:.65rem;color:var(--muted)">${results[0]?.cat ?? ''}</div>
+      </div>
+    `;
+
+    // Tabela
+    const rows = results.map(p => {
+      const tvlStr = p.tvl != null ? '$' + fmt2(p.tvl) : '—';
+      const chg = p.change24h;
+      const chgStr = chg != null ? `<span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
+      const pct = totalTvl > 0 && p.tvl ? (p.tvl / totalTvl * 100).toFixed(1) : '0';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.55rem 1rem;font-size:.85rem">${p.icon} <a href="${p.link}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;font-weight:600">${p.name}</a></td>
+        <td style="padding:.55rem .75rem;color:var(--muted);font-size:.75rem">${p.cat}</td>
+        <td style="padding:.55rem .75rem;font-weight:700;font-size:.88rem">${tvlStr}</td>
+        <td style="padding:.55rem .75rem;font-size:.8rem">${chgStr}</td>
+        <td style="padding:.55rem .75rem">
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <div style="flex:1;background:var(--border);border-radius:2px;height:4px;min-width:60px">
+              <div style="width:${pct}%;background:linear-gradient(90deg,var(--hype),var(--purple));height:4px;border-radius:2px;min-width:2px"></div>
+            </div>
+            <span style="font-size:.7rem;color:var(--muted)">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--hover)">
+          <th style="text-align:left;padding:.5rem 1rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Protocolo</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tipo</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">TVL</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">24h</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Share</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+    if (tsEl) tsEl.textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:1rem;text-align:center;color:var(--red);font-size:.8rem">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+// ─── HYPE Staking / Validators ────────────────────────────────────────────────
+async function loadHLStaking() {
+  const el = document.getElementById('hl-staking-table');
+  const infoEl = document.getElementById('hl-staking-info');
+  const tsEl = document.getElementById('hl-staking-ts');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">⏳ Buscando validators...</div>';
+
+  try {
+    const r = await fetch(HL_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'validatorSummaries' }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0) throw new Error('Sem dados');
+
+    // Parsear cada validator
+    const validators = data.map(v => {
+      const dayStats = v.stats?.find(s => s[0] === 'day')?.[1] ?? {};
+      const apr = dayStats.predictedApr ?? 0;
+      const uptime = dayStats.uptimeFraction ?? 0;
+      const commission = v.commission ?? 0;
+      const aprNet = apr * (1 - commission);
+      const stake = parseFloat(v.stake ?? 0);
+      return {
+        name: v.name ?? v.validator?.slice(0, 10) + '...',
+        validator: v.validator,
+        stake,
+        commission,
+        apr,
+        aprNet,
+        uptime,
+        isActive: v.isActive ?? true,
+        isJailed: v.isJailed ?? false,
+      };
+    }).filter(v => v.isActive && !v.isJailed);
+
+    // Ordenar por APY net desc
+    validators.sort((a, b) => b.aprNet - a.aprNet);
+    const top15 = validators.slice(0, 15);
+
+    // Info geral
+    const totalStake = validators.reduce((s, v) => s + v.stake, 0);
+    const avgApr = validators.reduce((s, v) => s + v.aprNet, 0) / validators.length;
+    const maxApr = validators[0]?.aprNet ?? 0;
+
+    if (infoEl) {
+      infoEl.innerHTML = `
+        <span>📊 Validators ativos: <strong style="color:var(--text)">${validators.length}</strong></span>
+        <span>💰 Total em stake: <strong style="color:var(--hype)">${(totalStake/1e6).toFixed(1)}M HYPE</strong></span>
+        <span>📈 APY médio (net): <strong style="color:var(--green)">${(avgApr*100).toFixed(2)}%</strong></span>
+        <span>🏆 Melhor APY: <strong style="color:var(--green)">${(maxApr*100).toFixed(2)}%</strong></span>
+        <span style="color:var(--muted)">💡 kHYPE (Kinetiq) = liquid staking HYPE</span>
+      `;
+    }
+
+    const rows = top15.map((v, i) => {
+      const aprPct = (v.aprNet * 100).toFixed(2);
+      const commPct = (v.commission * 100).toFixed(0);
+      const uptimePct = (v.uptime * 100).toFixed(1);
+      const stakeM = (v.stake / 1e6).toFixed(2);
+      const isTop3 = i < 3;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      return `<tr style="border-bottom:1px solid var(--border);${isTop3?'background:rgba(167,139,250,.04)':''}">
+        <td style="padding:.5rem .75rem;font-size:.85rem;font-weight:${isTop3?'600':'400'}">${medal} ${v.name}</td>
+        <td style="padding:.5rem .75rem;font-weight:700;color:var(--green);font-size:.9rem">${aprPct}%</td>
+        <td style="padding:.5rem .75rem;font-size:.8rem;color:var(--muted)">${commPct}%</td>
+        <td style="padding:.5rem .75rem;font-size:.8rem;color:${parseFloat(uptimePct)>=99?'var(--green)':parseFloat(uptimePct)>=95?'var(--yellow)':'var(--red)'}">${uptimePct}%</td>
+        <td style="padding:.5rem .75rem;font-size:.8rem">${stakeM}M</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--hover)">
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Validator</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">APY Net</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Comissão</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Uptime</th>
+          <th style="text-align:left;padding:.5rem .75rem;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Stake</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="padding:.5rem 1rem;font-size:.65rem;color:var(--muted)">
+      Top 15 validators por APY net (comissão já descontada). Fonte: Hyperliquid API.
+    </div>`;
+
+    if (tsEl) tsEl.textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:1rem;text-align:center;color:var(--red);font-size:.8rem">Erro: ${e.message}</div>`;
+    console.warn('loadHLStaking:', e);
+  }
+}
+
 async function refreshHLAll() {
-  await Promise.all([loadHLFunding(), loadHLVaults(), loadHLLend(), loadHLSpot()]);
+  await Promise.all([loadHLFunding(), loadHLVaults(), loadHLLend(), loadHLSpot(), loadHLEvm(), loadHLStaking()]);
 }
 
 // Auto-refresh a cada 5min quando tab HL estiver ativa
