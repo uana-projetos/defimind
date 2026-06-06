@@ -443,6 +443,32 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 /* Tooltip simples */
 [data-tip] { position: relative; cursor: help; }
 [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
+
+/* ── HYPERLIQUID TAB ─────────────────────────────────────────────── */
+.hl-section-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.25rem}
+.hl-section-header{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.hl-section-icon{font-size:1rem;flex-shrink:0}
+.hl-section-title{font-size:.85rem;font-weight:600;flex-shrink:0}
+.hl-badge{font-size:.58rem;padding:2px 7px;border-radius:4px;font-weight:600;text-transform:uppercase;background:rgba(244,114,182,.12);color:var(--hype);flex-shrink:0}
+.hl-filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.hl-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.hl-table thead th{text-align:left;padding:.5rem .85rem;color:var(--muted);font-weight:500;font-size:.67rem;text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+.hl-table thead th.sortable{cursor:pointer}
+.hl-table thead th.sortable:hover{color:var(--cyan)}
+.hl-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+.hl-table tbody tr:last-child{border:none}
+.hl-table tbody tr:hover{background:rgba(244,114,182,.05)}
+.hl-table td{padding:.5rem .85rem;vertical-align:middle}
+.hl-fr-pos{color:var(--green);font-weight:600}
+.hl-fr-neg{color:var(--red);font-weight:600}
+.hl-fr-bar{height:5px;border-radius:3px;min-width:2px;max-width:80px;display:inline-block;vertical-align:middle;margin-left:5px}
+.hl-tag{font-size:.6rem;padding:1px 5px;border-radius:3px;border:1px solid;white-space:nowrap}
+.hl-tag-pos{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.3)}
+.hl-tag-neg{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.3)}
+.hl-summary-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.65rem .85rem}
+.hl-summary-card .sc-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem}
+.hl-summary-card .sc-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
+.hl-loading{padding:1.5rem;text-align:center;color:var(--muted);font-size:.8rem}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -627,6 +653,84 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
   <div id="loansSection"></div>
 </div>
 
+<!-- ── TAB: HYPERLIQUID ─────────────────────────────────────────── -->
+<div id="tabHl" class="tab-section" style="display:none">
+
+  <!-- Header HL -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
+    <div>
+      <h2 style="font-size:1rem;font-weight:700;color:var(--hype);display:flex;align-items:center;gap:.4rem">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Hyperliquid — Ecosystem Monitor
+      </h2>
+      <p style="font-size:.68rem;color:var(--muted);margin-top:.15rem">Funding rates, vaults, borrow/lend e spot ao vivo</p>
+    </div>
+    <button onclick="refreshHLAll()" style="background:none;border:1px solid rgba(244,114,182,.4);border-radius:6px;color:var(--hype);font-size:.72rem;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:.35rem">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Atualizar tudo
+    </button>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div id="hl-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;margin-bottom:1.25rem"></div>
+
+  <!-- Funding Rates -->
+  <div class="hl-section-card">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">&#9889;</span>
+      <span class="hl-section-title">Funding Rates — Perps</span>
+      <span class="hl-badge">APY anualizado</span>
+      <span id="hl-funding-ts" style="font-size:.6rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+    <div class="hl-filter-bar">
+      <input type="text" id="hl-funding-search" placeholder="Buscar ativo..." class="search-input" style="max-width:180px" oninput="filterHLFunding()">
+      <select id="hl-funding-filter" class="search-select" onchange="filterHLFunding()">
+        <option value="all">Todos</option>
+        <option value="pos">Positivo (shorts ganham)</option>
+        <option value="neg">Negativo (longs ganham)</option>
+        <option value="top">Top APY</option>
+      </select>
+      <select id="hl-funding-sort" class="search-select" onchange="filterHLFunding()">
+        <option value="apy">Ordenar por APY</option>
+        <option value="oi">Ordenar por OI</option>
+        <option value="vol">Ordenar por Volume</option>
+      </select>
+    </div>
+    <div id="hl-funding-table"></div>
+  </div>
+
+  <!-- HLP Vault + Vaults Comunitarios -->
+  <div class="hl-section-card" style="margin-top:1rem">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">&#127970;</span>
+      <span class="hl-section-title">Vaults — HLP &amp; Comunitarios</span>
+      <span class="hl-badge" style="background:rgba(167,139,250,.15);color:var(--purple)">APR real</span>
+      <span id="hl-vault-ts" style="font-size:.6rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+    <div id="hl-vault-table"></div>
+  </div>
+
+  <!-- Borrow / Lend -->
+  <div class="hl-section-card" style="margin-top:1rem">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">&#128176;</span>
+      <span class="hl-section-title">Borrow / Lend</span>
+      <span class="hl-badge" style="background:rgba(52,211,153,.15);color:var(--green)">Taxas ao vivo</span>
+    </div>
+    <div id="hl-lend-table"></div>
+  </div>
+
+  <!-- Spot Markets -->
+  <div class="hl-section-card" style="margin-top:1rem">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">&#9878;</span>
+      <span class="hl-section-title">Spot Markets</span>
+      <span class="hl-badge" style="background:rgba(59,158,255,.12);color:var(--cyan)">Volume 24h</span>
+    </div>
+    <div id="hl-spot-table"></div>
+  </div>
+
+</div>
 <div id="pwa-banner">
   <span style="font-size:1.3rem">🧠</span>
   <div class="pwa-text"><strong>Instalar DefiMind</strong><br>Adicione à tela inicial e use offline</div>
@@ -1580,7 +1684,7 @@ async function openLiveLoanSearch() {
 // ══════════════════════════════════════════════════════════
 function showTab(tab) {
   // Hide all tab sections
-  ['tabYield','tabPools','tabLoans','tabAirdrops'].forEach(id => {
+  ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -1632,6 +1736,15 @@ function showTab(tab) {
   localStorage.setItem('defiTab', tab);
   updateTabBadges();
 }
+  } else if (tab === 'hl') {
+    const el = document.getElementById('tabHl');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-hl');
+    if (btn) btn.classList.add('active');
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = 'none';
+    // Carrega dados na primeira visita
+    if (!window._hlLoaded) { window._hlLoaded = true; refreshHLAll(); }
 
 function updateTabBadges() {
   // Pools badge
@@ -5007,6 +5120,32 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
 /* Tooltip simples */
 [data-tip] { position: relative; cursor: help; }
 [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
+
+/* ── HYPERLIQUID TAB ─────────────────────────────────────────────── */
+.hl-section-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.25rem}
+.hl-section-header{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.hl-section-icon{font-size:1rem;flex-shrink:0}
+.hl-section-title{font-size:.85rem;font-weight:600;flex-shrink:0}
+.hl-badge{font-size:.58rem;padding:2px 7px;border-radius:4px;font-weight:600;text-transform:uppercase;background:rgba(244,114,182,.12);color:var(--hype);flex-shrink:0}
+.hl-filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.hl-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.hl-table thead th{text-align:left;padding:.5rem .85rem;color:var(--muted);font-weight:500;font-size:.67rem;text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+.hl-table thead th.sortable{cursor:pointer}
+.hl-table thead th.sortable:hover{color:var(--cyan)}
+.hl-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+.hl-table tbody tr:last-child{border:none}
+.hl-table tbody tr:hover{background:rgba(244,114,182,.05)}
+.hl-table td{padding:.5rem .85rem;vertical-align:middle}
+.hl-fr-pos{color:var(--green);font-weight:600}
+.hl-fr-neg{color:var(--red);font-weight:600}
+.hl-fr-bar{height:5px;border-radius:3px;min-width:2px;max-width:80px;display:inline-block;vertical-align:middle;margin-left:5px}
+.hl-tag{font-size:.6rem;padding:1px 5px;border-radius:3px;border:1px solid;white-space:nowrap}
+.hl-tag-pos{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.3)}
+.hl-tag-neg{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.3)}
+.hl-summary-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.65rem .85rem}
+.hl-summary-card .sc-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem}
+.hl-summary-card .sc-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
+.hl-loading{padding:1.5rem;text-align:center;color:var(--muted);font-size:.8rem}
 </style>
 <script>
 // Enhanced wallet system
@@ -5524,6 +5663,32 @@ header{padding:.45rem .75rem}
 /* Tooltip simples */
 [data-tip] { position: relative; cursor: help; }
 [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
+
+/* ── HYPERLIQUID TAB ─────────────────────────────────────────────── */
+.hl-section-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.25rem}
+.hl-section-header{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.hl-section-icon{font-size:1rem;flex-shrink:0}
+.hl-section-title{font-size:.85rem;font-weight:600;flex-shrink:0}
+.hl-badge{font-size:.58rem;padding:2px 7px;border-radius:4px;font-weight:600;text-transform:uppercase;background:rgba(244,114,182,.12);color:var(--hype);flex-shrink:0}
+.hl-filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.hl-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.hl-table thead th{text-align:left;padding:.5rem .85rem;color:var(--muted);font-weight:500;font-size:.67rem;text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+.hl-table thead th.sortable{cursor:pointer}
+.hl-table thead th.sortable:hover{color:var(--cyan)}
+.hl-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+.hl-table tbody tr:last-child{border:none}
+.hl-table tbody tr:hover{background:rgba(244,114,182,.05)}
+.hl-table td{padding:.5rem .85rem;vertical-align:middle}
+.hl-fr-pos{color:var(--green);font-weight:600}
+.hl-fr-neg{color:var(--red);font-weight:600}
+.hl-fr-bar{height:5px;border-radius:3px;min-width:2px;max-width:80px;display:inline-block;vertical-align:middle;margin-left:5px}
+.hl-tag{font-size:.6rem;padding:1px 5px;border-radius:3px;border:1px solid;white-space:nowrap}
+.hl-tag-pos{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.3)}
+.hl-tag-neg{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.3)}
+.hl-summary-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.65rem .85rem}
+.hl-summary-card .sc-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem}
+.hl-summary-card .sc-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
+.hl-loading{padding:1.5rem;text-align:center;color:var(--muted);font-size:.8rem}
 </style>
 
 <style id="premium-nav">
@@ -5661,6 +5826,32 @@ header::before{
 .apy-delta-dn { background:rgba(239,68,68,.15); color:#ef4444; }
 .th-sort { cursor:pointer; user-select:none; }
 .th-sort:hover { color:var(--cyan); }
+
+/* ── HYPERLIQUID TAB ─────────────────────────────────────────────── */
+.hl-section-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.25rem}
+.hl-section-header{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.hl-section-icon{font-size:1rem;flex-shrink:0}
+.hl-section-title{font-size:.85rem;font-weight:600;flex-shrink:0}
+.hl-badge{font-size:.58rem;padding:2px 7px;border-radius:4px;font-weight:600;text-transform:uppercase;background:rgba(244,114,182,.12);color:var(--hype);flex-shrink:0}
+.hl-filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.hl-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.hl-table thead th{text-align:left;padding:.5rem .85rem;color:var(--muted);font-weight:500;font-size:.67rem;text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+.hl-table thead th.sortable{cursor:pointer}
+.hl-table thead th.sortable:hover{color:var(--cyan)}
+.hl-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+.hl-table tbody tr:last-child{border:none}
+.hl-table tbody tr:hover{background:rgba(244,114,182,.05)}
+.hl-table td{padding:.5rem .85rem;vertical-align:middle}
+.hl-fr-pos{color:var(--green);font-weight:600}
+.hl-fr-neg{color:var(--red);font-weight:600}
+.hl-fr-bar{height:5px;border-radius:3px;min-width:2px;max-width:80px;display:inline-block;vertical-align:middle;margin-left:5px}
+.hl-tag{font-size:.6rem;padding:1px 5px;border-radius:3px;border:1px solid;white-space:nowrap}
+.hl-tag-pos{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.3)}
+.hl-tag-neg{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.3)}
+.hl-summary-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.65rem .85rem}
+.hl-summary-card .sc-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem}
+.hl-summary-card .sc-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
+.hl-loading{padding:1.5rem;text-align:center;color:var(--muted);font-size:.8rem}
 </style>
 <button id="pauseBtn" title="Pausar/retomar atualizacoes automaticas" onclick="togglePause()">⏸ Pausar</button>
 <script>
@@ -5764,5 +5955,296 @@ function toggleSortPools(cat, col) {
   }
   if (typeof renderSections === 'function') renderSections();
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// HYPERLIQUID TAB — Funding Rates, Vaults, Borrow/Lend, Spot
+// ═══════════════════════════════════════════════════════════════════
+const HL_INFO = 'https://api.hyperliquid.xyz/info';
+const HL_VAULTS = [
+  { addr:'0xdfc24b077bc1425ad1dea75bcb6f8158e10df303', name:'HLP — Hyperliquidity Provider', icon:'🏛', desc:'Vault oficial do protocolo. Ganha fees de trading, spreads e liquidacoes.' },
+  { addr:'0x010461c14e146ac35fe42271bdc1134ee31c703a', name:'Kinetix Vault',  icon:'⚡', desc:'Estrategia de market making ativo.' },
+];
+
+let _hlFundingData  = [];
+let _hlVaultData    = [];
+let _hlLendData     = [];
+let _hlSpotData     = [];
+
+async function hlPost(body) {
+  const r = await fetch(HL_INFO, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
+  });
+  return r.json();
+}
+
+function fmtB(n) { // format big number
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(2);
+}
+
+// ── Funding Rates ─────────────────────────────────────────────────
+async function loadHLFunding() {
+  const el = document.getElementById('hl-funding-table');
+  if (el) el.innerHTML = '<div class="hl-loading">Carregando funding rates...</div>';
+  try {
+    const data = await hlPost({ type:'metaAndAssetCtxs' });
+    const meta = data[0] || {};
+    const ctxs = data[1] || [];
+    const universe = meta.universe || [];
+    _hlFundingData = ctxs.map((ctx, i) => {
+      const name  = universe[i]?.name || 'UNKNOWN';
+      const fr8h  = parseFloat(ctx.funding || 0);      // taxa 8h em decimal
+      const frPct = fr8h * 100;                         // em %
+      const frApy = fr8h * 3 * 365 * 100;              // anualizado (3x por dia)
+      const oi    = parseFloat(ctx.openInterest || 0) * parseFloat(ctx.markPx || 0);
+      const vol   = parseFloat(ctx.dayNtlVlm || 0);
+      const mark  = parseFloat(ctx.markPx || 0);
+      return { name, fr8h, frPct, frApy, oi, vol, mark };
+    }).filter(x => x.mark > 0 && x.name !== 'UNKNOWN');
+
+    const ts = document.getElementById('hl-funding-ts');
+    if (ts) ts.textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
+    filterHLFunding();
+    updateHLSummary();
+  } catch(e) {
+    const el = document.getElementById('hl-funding-table');
+    if (el) el.innerHTML = '<div class="hl-loading">Falha ao carregar. Tente novamente.</div>';
+  }
+}
+
+function filterHLFunding() {
+  const search  = (document.getElementById('hl-funding-search')?.value || '').toUpperCase();
+  const filter  = document.getElementById('hl-funding-filter')?.value || 'all';
+  const sortBy  = document.getElementById('hl-funding-sort')?.value || 'apy';
+
+  let rows = _hlFundingData.filter(x => {
+    if (search && !x.name.includes(search)) return false;
+    if (filter === 'pos' && x.frApy <= 0) return false;
+    if (filter === 'neg' && x.frApy >= 0) return false;
+    if (filter === 'top' && Math.abs(x.frApy) < 5) return false;
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    if (sortBy === 'apy') return Math.abs(b.frApy) - Math.abs(a.frApy);
+    if (sortBy === 'oi')  return b.oi - a.oi;
+    if (sortBy === 'vol') return b.vol - a.vol;
+    return 0;
+  });
+
+  const el = document.getElementById('hl-funding-table');
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<div class="hl-loading">Nenhum resultado.</div>'; return; }
+
+  const maxApy = Math.max(...rows.map(x => Math.abs(x.frApy)));
+
+  el.innerHTML = '<table class="hl-table"><thead><tr>'
+    + '<th>Ativo</th><th>Preco</th><th>Funding 8h</th><th>APY Anualizado</th>'
+    + '<th>Open Interest</th><th>Vol 24h</th><th>Estrategia</th>'
+    + '</tr></thead><tbody>'
+    + rows.slice(0,40).map(x => {
+        const pos   = x.frApy >= 0;
+        const cls   = pos ? 'hl-fr-pos' : 'hl-fr-neg';
+        const tag   = pos ? '<span class="hl-tag hl-tag-pos">Short ganha</span>' : '<span class="hl-tag hl-tag-neg">Long ganha</span>';
+        const barW  = Math.round(Math.abs(x.frApy) / maxApy * 80);
+        const barC  = pos ? '#34d399' : '#ef4444';
+        const bar   = '<span class="hl-fr-bar" style="width:' + barW + 'px;background:' + barC + '20;border:1px solid ' + barC + '40"></span>';
+        const mark  = x.mark >= 1000 ? '$' + x.mark.toLocaleString('en',{maximumFractionDigits:0})
+                     : x.mark >= 1 ? '$' + x.mark.toFixed(4)
+                     : '$' + x.mark.toFixed(6);
+        return '<tr>'
+          + '<td style="font-weight:600">' + x.name + '</td>'
+          + '<td style="font-family:monospace">' + mark + '</td>'
+          + '<td class="' + cls + '">' + (x.frPct >= 0 ? '+' : '') + x.frPct.toFixed(4) + '%</td>'
+          + '<td>' + '<span class="' + cls + '">' + (x.frApy >= 0 ? '+' : '') + x.frApy.toFixed(2) + '% APY</span>' + bar + '</td>'
+          + '<td style="font-family:monospace;font-size:.75rem">' + fmtB(x.oi) + '</td>'
+          + '<td style="font-family:monospace;font-size:.75rem">' + fmtB(x.vol) + '</td>'
+          + '<td>' + tag + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+// ── Vaults ────────────────────────────────────────────────────────
+async function loadHLVaults() {
+  const el = document.getElementById('hl-vault-table');
+  if (el) el.innerHTML = '<div class="hl-loading">Carregando vaults...</div>';
+  try {
+    const results = await Promise.all(HL_VAULTS.map(v =>
+      hlPost({ type:'vaultDetails', vaultAddress: v.addr })
+        .then(d => ({ ...v, data: d }))
+        .catch(() => ({ ...v, data: null }))
+    ));
+    _hlVaultData = results;
+    const ts = document.getElementById('hl-vault-ts');
+    if (ts) ts.textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
+    renderHLVaults();
+  } catch(e) {
+    const el = document.getElementById('hl-vault-table');
+    if (el) el.innerHTML = '<div class="hl-loading">Falha ao carregar vaults.</div>';
+  }
+}
+
+function renderHLVaults() {
+  const el = document.getElementById('hl-vault-table');
+  if (!el) return;
+  el.innerHTML = '<table class="hl-table"><thead><tr>'
+    + '<th>Vault</th><th>APR</th><th>TVL</th><th>Followers</th><th>Lock-up</th><th>Descricao</th>'
+    + '</tr></thead><tbody>'
+    + _hlVaultData.map(v => {
+        const d    = v.data;
+        const apr  = d?.apr != null ? (parseFloat(d.apr)*100).toFixed(2) + '%' : (d?.summary?.apr ? (parseFloat(d.summary.apr)*100).toFixed(2)+'%' : '—');
+        const tvl  = d?.vaultEquity != null ? fmtB(parseFloat(d.vaultEquity))
+                     : d?.summary?.vaultEquity != null ? fmtB(parseFloat(d.summary.vaultEquity)) : '—';
+        const fols = d?.followers?.length ?? d?.summary?.numFollowers ?? '—';
+        const aprColor = d ? 'var(--green)' : 'var(--muted)';
+        return '<tr>'
+          + '<td><span style="margin-right:.3rem">' + v.icon + '</span><span style="font-weight:600">' + v.name + '</span></td>'
+          + '<td style="font-family:monospace;font-weight:700;color:' + aprColor + '">' + apr + '</td>'
+          + '<td style="font-family:monospace">' + tvl + '</td>'
+          + '<td style="font-family:monospace">' + fols + '</td>'
+          + '<td><span style="font-size:.68rem;color:var(--orange)">4 dias</span></td>'
+          + '<td style="font-size:.72rem;color:var(--muted);max-width:220px">' + v.desc + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+// ── Borrow / Lend ─────────────────────────────────────────────────
+const HL_LEND_TOKENS = ['USDC','HYPE','UBTC','UETH'];
+
+async function loadHLLend() {
+  const el = document.getElementById('hl-lend-table');
+  if (el) el.innerHTML = '<div class="hl-loading">Carregando taxas de emprestimo...</div>';
+  try {
+    const results = await Promise.all(HL_LEND_TOKENS.map(t =>
+      hlPost({ type:'borrowLendReserveState', token: t })
+        .then(d => ({ token: t, ...d }))
+        .catch(() => ({ token: t }))
+    ));
+    _hlLendData = results.filter(r => r.token);
+    renderHLLend();
+  } catch(e) {
+    const el = document.getElementById('hl-lend-table');
+    if (el) el.innerHTML = '<div class="hl-loading">Falha ao carregar taxas.</div>';
+  }
+}
+
+function renderHLLend() {
+  const el = document.getElementById('hl-lend-table');
+  if (!el) return;
+
+  const rows = _hlLendData.map(r => {
+    const util      = parseFloat(r.utilizationRate || r.utilization || 0) * 100;
+    const borrowApy = parseFloat(r.borrowRate || r.currentBorrowApr || 0) * 100;
+    const supplyApy = parseFloat(r.supplyRate || r.currentSupplyApr || 0) * 100;
+    const total     = parseFloat(r.totalSupply || 0);
+    const borrowed  = parseFloat(r.totalBorrow || 0);
+    const supplyColor = supplyApy > 5 ? 'var(--green)' : supplyApy > 2 ? 'var(--orange)' : 'var(--muted)';
+    return '<tr>'
+      + '<td style="font-weight:700">' + r.token + '</td>'
+      + '<td style="font-family:monospace;color:' + supplyColor + ';font-weight:600">' + (supplyApy > 0 ? supplyApy.toFixed(2) + '% APY' : '—') + '</td>'
+      + '<td style="font-family:monospace;color:var(--red)">' + (borrowApy > 0 ? borrowApy.toFixed(2) + '% APY' : '—') + '</td>'
+      + '<td style="font-family:monospace;font-size:.75rem">' + (util > 0 ? util.toFixed(1) + '%' : '—') + '</td>'
+      + '<td style="font-family:monospace;font-size:.75rem">' + (total > 0 ? fmtB(total) : '—') + '</td>'
+      + '</tr>';
+  });
+
+  el.innerHTML = '<table class="hl-table"><thead><tr>'
+    + '<th>Token</th><th>Supply APY</th><th>Borrow APY</th><th>Utilizacao</th><th>Total Supply</th>'
+    + '</tr></thead><tbody>'
+    + (rows.length ? rows.join('') : '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted)">Sem dados de borrow/lend disponiveis no momento.</td></tr>')
+    + '</tbody></table>';
+}
+
+// ── Spot Markets ──────────────────────────────────────────────────
+async function loadHLSpot() {
+  const el = document.getElementById('hl-spot-table');
+  if (el) el.innerHTML = '<div class="hl-loading">Carregando spot markets...</div>';
+  try {
+    const data = await hlPost({ type:'spotMetaAndAssetCtxs' });
+    const tokens = data[0]?.tokens || [];
+    const universe = data[0]?.universe || [];
+    const ctxs   = data[1] || [];
+
+    _hlSpotData = ctxs.map((ctx, i) => {
+      const pair  = universe[i];
+      if (!pair) return null;
+      const base  = tokens[pair.tokens?.[0]]?.name || '?';
+      const quote = tokens[pair.tokens?.[1]]?.name || 'USDC';
+      const mark  = parseFloat(ctx.markPx || 0);
+      const prev  = parseFloat(ctx.prevDayPx || mark);
+      const chg   = prev ? ((mark - prev) / prev) * 100 : 0;
+      const vol   = parseFloat(ctx.dayNtlVlm || 0);
+      return { pair: base + '/' + quote, base, quote, mark, chg, vol };
+    }).filter(x => x && x.vol > 1000).sort((a,b) => b.vol - a.vol);
+
+    renderHLSpot();
+  } catch(e) {
+    const el = document.getElementById('hl-spot-table');
+    if (el) el.innerHTML = '<div class="hl-loading">Falha ao carregar spot markets.</div>';
+  }
+}
+
+function renderHLSpot() {
+  const el = document.getElementById('hl-spot-table');
+  if (!el) return;
+  el.innerHTML = '<table class="hl-table"><thead><tr>'
+    + '<th>Par</th><th>Preco</th><th>Variacao 24h</th><th>Volume 24h</th>'
+    + '</tr></thead><tbody>'
+    + _hlSpotData.slice(0,25).map(x => {
+        const chgCol = x.chg >= 0 ? 'var(--green)' : 'var(--red)';
+        const mark   = x.mark >= 1000 ? '$' + x.mark.toLocaleString('en',{maximumFractionDigits:2})
+                       : x.mark >= 1  ? '$' + x.mark.toFixed(4)
+                       : '$' + x.mark.toFixed(8);
+        return '<tr>'
+          + '<td style="font-weight:600">' + x.pair + '</td>'
+          + '<td style="font-family:monospace">' + mark + '</td>'
+          + '<td style="font-family:monospace;color:' + chgCol + '">' + (x.chg >= 0 ? '+' : '') + x.chg.toFixed(2) + '%</td>'
+          + '<td style="font-family:monospace">' + fmtB(x.vol) + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+// ── Summary cards ─────────────────────────────────────────────────
+function updateHLSummary() {
+  const el = document.getElementById('hl-summary-cards');
+  if (!el || !_hlFundingData.length) return;
+  const posRates = _hlFundingData.filter(x => x.frApy > 0).length;
+  const negRates = _hlFundingData.filter(x => x.frApy < 0).length;
+  const maxFR    = _hlFundingData.reduce((a,b) => Math.abs(b.frApy) > Math.abs(a.frApy) ? b : a, _hlFundingData[0]);
+  const totalOI  = _hlFundingData.reduce((s,x) => s + x.oi, 0);
+  const totalVol = _hlFundingData.reduce((s,x) => s + x.vol, 0);
+
+  el.innerHTML = [
+    { label:'Ativos listados', val: _hlFundingData.length, color:'var(--cyan)' },
+    { label:'Funding positivo', val: posRates + ' ativos', color:'var(--green)' },
+    { label:'Funding negativo', val: negRates + ' ativos', color:'var(--red)' },
+    { label:'Maior APY', val: (maxFR?.frApy >= 0 ? '+' : '') + (maxFR?.frApy || 0).toFixed(1) + '%', color:'var(--hype)', sub: maxFR?.name },
+    { label:'Open Interest total', val: fmtB(totalOI), color:'var(--text)' },
+    { label:'Volume 24h total', val: fmtB(totalVol), color:'var(--text)' },
+  ].map(c =>
+    '<div class="hl-summary-card">'
+    + '<div class="sc-label">' + c.label + '</div>'
+    + '<div class="sc-val" style="color:' + c.color + '">' + c.val + '</div>'
+    + (c.sub ? '<div style="font-size:.6rem;color:var(--muted);margin-top:.1rem">' + c.sub + '</div>' : '')
+    + '</div>'
+  ).join('');
+}
+
+// ── Refresh all ───────────────────────────────────────────────────
+async function refreshHLAll() {
+  await Promise.all([loadHLFunding(), loadHLVaults(), loadHLLend(), loadHLSpot()]);
+}
+
+// Auto-refresh a cada 5min quando tab HL estiver ativa
+setInterval(() => {
+  if (window._hlLoaded) refreshHLAll();
+}, 5 * 60 * 1000);
 </script>
 </body>
