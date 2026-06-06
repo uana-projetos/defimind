@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -565,6 +565,18 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <div id="tabPools" class="tab-section" style="display:none">
   <!-- Wallet banner (shows if address saved) -->
   <div id="walletBanner"></div>
+<!-- HL Bot Wallet Card -->
+<div id="hl-bot-card" style="background:var(--card);border:1px solid rgba(244,114,182,.3);border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--hype),var(--cyan))"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="font-size:.85rem">&#x1F916;</span>
+      <span style="font-weight:600;font-size:.82rem">HL Bot &#x2014; Conta Perps</span>
+    </div>
+    <button onclick="renderHLCard()" style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:.65rem;padding:2px 7px;cursor:pointer">&#x21BB; Atualizar</button>
+  </div>
+  <div id="hl-wallet-card"><div style="color:var(--muted);font-size:.72rem">Carregando...</div></div>
+</div>
 
   <div class="search-bar">
     <input class="search-input" id="poolSearchInput" type="text" placeholder="🔍 Buscar pool... ETH, Uniswap, Solana..." oninput="filterPoolSections('pool')">
@@ -1727,7 +1739,7 @@ function renderSections() {
       </div>
       <table>
         <thead><tr>
-          <th>Pool</th>${extraHeader}<th>Protocolo</th><th>Rede</th><th>APR</th><th>TVL</th><th></th>
+          <th>Pool</th>${extraHeader}<th>Protocolo</th><th>Rede</th><th style="cursor:pointer;user-select:none" onclick="toggleSortPools(`${cat}`,`apy`)">APR &#x21C5;</th><th style="cursor:pointer;user-select:none" onclick="toggleSortPools(`${cat}`,`tvl`)">TVL &#x21C5;</th><th></th>
         </tr></thead>
         <tbody>
           ${shown.map((p, i) => {
@@ -1933,6 +1945,7 @@ async function refreshFromAPI() {
 
     // Update global data
     Object.assign(POOLS, newPools);
+        recordApySnapshot(newPools);
     renderSections();
     if (typeof renderSimulator === 'function') renderSimulator();
     const now = new Date().toLocaleString('pt-BR');
@@ -1944,6 +1957,50 @@ async function refreshFromAPI() {
   }
 }
 
+// === APY HISTORY ===
+const APY_HISTORY_KEY = 'dm_apy_history_v1';
+const APY_HISTORY_MAX = 14;
+function getApyHistory(){try{return JSON.parse(localStorage.getItem(APY_HISTORY_KEY)||'{}')}catch{return{}}}
+function saveApyHistory(h){try{localStorage.setItem(APY_HISTORY_KEY,JSON.stringify(h))}catch(e){}}
+function recordApySnapshot(pools){
+  const h=getApyHistory();
+  const now=new Date().toISOString().slice(0,13);
+  for(const[cat,list]of Object.entries(pools)){
+    for(const p of list){
+      const key=cat+'|'+p.symbol+'|'+p.chain+'|'+p.project;
+      if(!h[key])h[key]=[];
+      if(h[key].length===0||h[key][h[key].length-1].t!==now){
+        h[key].push({t:now,apy:p.apy});
+        if(h[key].length>APY_HISTORY_MAX)h[key].shift();
+      }
+    }
+  }
+  saveApyHistory(h);
+}
+function getApyDelta(cat,pool){
+  const h=getApyHistory();
+  const key=cat+'|'+pool.symbol+'|'+pool.chain+'|'+pool.project;
+  const e=h[key];
+  if(!e||e.length<2)return null;
+  const prev=e[e.length-2].apy;
+  if(!prev)return null;
+  return((pool.apy-prev)/prev)*100;
+}
+function getApySparkline(cat,pool,W=60,H=18){
+  const h=getApyHistory();
+  const key=cat+'|'+pool.symbol+'|'+pool.chain+'|'+pool.project;
+  const e=h[key];
+  if(!e||e.length<2)return'';
+  const vals=e.map(x=>x.apy);
+  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
+  const pts=vals.map((v,i)=>{
+    const x=(i/(vals.length-1))*W;
+    const y=H-((v-mn)/rng)*H;
+    return x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ');
+  const col=vals[vals.length-1]>=vals[0]?'#34d399':'#ef4444';
+  return '<svg width="'+W+'" height="'+H+'" style="vertical-align:middle;margin-left:4px;flex-shrink:0"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
 // Refresh on load + interval
 setTimeout(refreshFromAPI, 3000);
 window._poolRefreshInterval = setInterval(refreshFromAPI, REFRESH_INTERVAL);
@@ -5597,6 +5654,13 @@ header::before{
 /* Tooltip simples */
 [data-tip] { position: relative; cursor: help; }
 [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
+/* APY sparkline inline */
+.apy-cell { display:flex; align-items:center; gap:2px; }
+.apy-delta-badge { font-size:.58rem; font-family:'JetBrains Mono',monospace; padding:1px 4px; border-radius:3px; }
+.apy-delta-up { background:rgba(52,211,153,.15); color:#34d399; }
+.apy-delta-dn { background:rgba(239,68,68,.15); color:#ef4444; }
+.th-sort { cursor:pointer; user-select:none; }
+.th-sort:hover { color:var(--cyan); }
 </style>
 <button id="pauseBtn" title="Pausar/retomar atualizacoes automaticas" onclick="togglePause()">⏸ Pausar</button>
 <script>
@@ -5615,6 +5679,90 @@ function togglePause() {
     window._priceRefreshInterval = setInterval(refreshPrices, PRICE_INTERVAL);
     window._myPoolInterval = setInterval(renderMyPools, 60000);
   }
+}
+
+// === HYPERLIQUID BOT WALLET ===
+const HL_BOT_ADDR = '0xBdF9F7F2FF5E9A8b3d32c53B9CDefC868274E32A';
+const HL_API_URL = 'https://api.hyperliquid.xyz/info';
+
+async function fetchHLPerp(addr) {
+  const res = await fetch(HL_API_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({type:'clearinghouseState', user: addr})
+  });
+  return res.json();
+}
+
+async function fetchHLSpot(addr) {
+  const res = await fetch(HL_API_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({type:'spotClearinghouseState', user: addr})
+  });
+  return res.json();
+}
+
+async function renderHLCard() {
+  const card = document.getElementById('hl-wallet-card');
+  if (!card) return;
+  card.innerHTML = '<div style="color:var(--muted);font-size:.72rem">Buscando dados...</div>';
+  try {
+    const [perp, spot] = await Promise.all([fetchHLPerp(HL_BOT_ADDR), fetchHLSpot(HL_BOT_ADDR)]);
+    const equity = parseFloat(perp?.crossMarginSummary?.accountValue || 0).toFixed(2);
+    const withdrawable = parseFloat(perp?.withdrawable || 0).toFixed(2);
+    const positions = perp?.assetPositions || [];
+    let posHtml = positions.length
+      ? positions.slice(0,5).map(p => {
+          const pos = p.position;
+          const pnlVal = parseFloat(pos?.unrealizedPnl || 0);
+          const col = pnlVal >= 0 ? 'var(--green)' : 'var(--red)';
+          const side = parseFloat(pos.szi) > 0 ? 'LONG' : 'SHORT';
+          const sideCol = side === 'LONG' ? 'var(--green)' : 'var(--red)';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.22rem 0;font-size:.72rem;border-bottom:1px solid var(--border)">'
+            + '<span style="font-weight:600">' + pos.coin + '</span>'
+            + '<span style="font-size:.62rem;color:' + sideCol + '">' + side + '</span>'
+            + '<span style="color:' + col + ';font-family:monospace">' + (pnlVal >= 0 ? '+' : '') + '\$' + pnlVal.toFixed(2) + '</span>'
+            + '</div>';
+        }).join('')
+      : '<div style="font-size:.72rem;color:var(--muted);text-align:center;padding:.4rem">Nenhuma posicao aberta</div>';
+    let spotBals = '';
+    if (spot?.balances?.length) {
+      const nonZero = spot.balances.filter(b => parseFloat(b.total) > 0.001);
+      if (nonZero.length) {
+        spotBals = '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;margin:.65rem 0 .3rem">Saldo Spot</div>'
+          + nonZero.map(b => '<div style="display:flex;justify-content:space-between;font-size:.72rem;border-bottom:1px solid var(--border);padding:.2rem 0"><span style="color:var(--muted)">' + b.coin + '</span><span style="font-family:monospace">' + parseFloat(b.total).toFixed(4) + '</span></div>').join('');
+      }
+    }
+    card.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.6rem">'
+      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Equity</div><div style="font-family:monospace;font-size:.88rem;font-weight:700">\$' + equity + '</div></div>'
+      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Disponivel</div><div style="font-family:monospace;font-size:.88rem;font-weight:700;color:var(--green)">\$' + withdrawable + '</div></div>'
+      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Posicoes</div><div style="font-family:monospace;font-size:.88rem;font-weight:700">' + positions.length + '</div></div>'
+      + '</div>'
+      + (positions.length ? '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem">Posicoes abertas</div>' + posHtml : posHtml)
+      + spotBals
+      + '<div style="font-size:.6rem;color:var(--muted);margin-top:.6rem;text-align:right">'
+      + HL_BOT_ADDR.slice(0,6) + '...' + HL_BOT_ADDR.slice(-4)
+      + '</div>';
+  } catch(e) {
+    card.innerHTML = '<div style="color:var(--muted);font-size:.72rem">API HL indisponivel. Tente novamente.</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(renderHLCard, 2000);
+  setInterval(renderHLCard, 5 * 60 * 1000);
+});
+
+// === SORT POOLS ===
+const _poolSort = {};
+function toggleSortPools(cat, col) {
+  if (_poolSort[cat] && _poolSort[cat].col === col) {
+    _poolSort[cat].dir = _poolSort[cat].dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    _poolSort[cat] = { col, dir: 'desc' };
+  }
+  if (typeof renderSections === 'function') renderSections();
 }
 </script>
 </body>
