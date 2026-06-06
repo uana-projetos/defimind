@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -424,6 +424,25 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 .est-value{font-size:.72rem;color:var(--green);font-weight:600}
 .community-rating{font-size:.7rem;color:var(--muted)}
 
+
+/* === MELHORIAS v2 === */
+/* Skeleton loading */
+.skeleton-row td { animation: shimmer 1.4s infinite; background: linear-gradient(90deg, var(--card) 25%, var(--border) 50%, var(--card) 75%); background-size: 200% 100%; border-radius: 4px; color: transparent !important; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* APY delta badge */
+.apy-delta { font-size: .58rem; font-family: 'JetBrains Mono', monospace; margin-left: 3px; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+.apy-delta.up { background: rgba(52,211,153,.15); color: var(--green); }
+.apy-delta.dn { background: rgba(239,68,68,.15); color: var(--red); }
+
+/* Botao pausar atualizacoes */
+#pauseBtn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 5px; font-size: .7rem; cursor: pointer; transition: all .15s; margin-left: .5rem; }
+#pauseBtn:hover { border-color: var(--orange); color: var(--orange); }
+#pauseBtn.paused { border-color: var(--red); color: var(--red); }
+
+/* Tooltip simples */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -1843,7 +1862,7 @@ function closePanel() {
 document.getElementById('panelClose').addEventListener('click', closePanel);
 document.getElementById('overlay').addEventListener('click', closePanel);
 document.getElementById('topToggle').addEventListener('change', renderSections);
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closePanel(); });
+// keydown Escape consolidado abaixo (junto com closeWhatsNew)
 
 // === AUTO-REFRESH via DefiLlama API (a cada 6h) ===
 const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
@@ -1857,7 +1876,7 @@ const STOCK_SET = new Set(['NVDA','TSLA','AAPL','COIN','META','MSTR','AMZN','GOO
 
 async function refreshFromAPI() {
   try {
-    const res = await fetch('https://yields.llama.fi/pools');
+    const res = await fetch('https://yields.llama.fi/pools', { signal: AbortSignal.timeout(15000) });
     const json = await res.json();
     const pools = json.data || [];
     const newPools = {ETH:[],BTC:[],SOL:[],HYPE:[],STOCKS:[],INDEX:[],METALS:[],RWA:[],STABLE:[]};
@@ -1927,7 +1946,7 @@ async function refreshFromAPI() {
 
 // Refresh on load + interval
 setTimeout(refreshFromAPI, 3000);
-setInterval(refreshFromAPI, REFRESH_INTERVAL);
+window._poolRefreshInterval = setInterval(refreshFromAPI, REFRESH_INTERVAL);
 
 // === PRICE UPDATE via CoinGecko (a cada 30min) ===
 const PRICE_INTERVAL = 30 * 60 * 1000;
@@ -1966,7 +1985,7 @@ async function refreshPrices() {
 
 // Price refresh: immediate + every 30min
 setTimeout(refreshPrices, 1500);
-setInterval(refreshPrices, PRICE_INTERVAL);
+window._priceRefreshInterval = setInterval(refreshPrices, PRICE_INTERVAL);
 
 // === MINHAS POOLS — Gestão de posições ===
 const OBJECTIVES = {
@@ -3358,16 +3377,8 @@ const _origRP = refreshPrices.bind({});
 
 // Patch price refresh to also update my pools
 const _baseRefreshPrices = refreshPrices;
-window._myPoolInterval = setInterval(renderMyPools, 60000); // re-render every 1min
-
-// Also re-render after price updates
-const _patchedPriceRefresh = async function() {
-  await _baseRefreshPrices();
-  renderMyPools();
-};
-// Override the interval
-clearInterval(window._myPoolInterval);
-setInterval(() => { renderMyPools(); }, 60000);
+// Re-render my pools a cada 1min (intervalo unico)
+window._myPoolInterval = setInterval(renderMyPools, 60000);
 
 // Initial notification request on first interaction
 document.addEventListener('click', function reqNotifOnce() {
@@ -4174,7 +4185,7 @@ function closePanel() {
   if (p) p.classList.remove('open');
   if (o) { o.classList.remove('open'); o.onclick = null; }
 }
-document.getElementById('panelClose')?.addEventListener('click', closePanel);
+// listener de closePanel ja registrado anteriormente -- removido duplicata
 setTimeout(() => { checkPoolAlerts(); initNotifications(); }, 2000);
 
 // ── PIX: gerador de payload EMV estático ─────────────────────────
@@ -4587,7 +4598,13 @@ function checkLoanAlerts() {
       if(n.x<0||n.x>W) n.vx*=-1;
       if(n.y<0||n.y>H) n.vy*=-1;
     });
-    requestAnimationFrame(draw);
+    if (!document.hidden) {
+      requestAnimationFrame(draw);
+    } else {
+      document.addEventListener('visibilitychange', function _rAFResume() {
+        if (!document.hidden) { requestAnimationFrame(draw); document.removeEventListener('visibilitychange', _rAFResume); }
+      });
+    }
   }
 
   resize(); init(); draw();
@@ -4914,6 +4931,25 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
 .wnet-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(59,158,255,.1)}
 .wscan-item{display:flex;align-items:center;gap:.45rem;padding:.28rem .45rem;border-radius:6px;background:rgba(255,255,255,.03);margin:.18rem 0;font-size:.72rem;cursor:pointer;transition:background .12s}
 .wscan-item:hover{background:rgba(59,158,255,.08)}
+
+/* === MELHORIAS v2 === */
+/* Skeleton loading */
+.skeleton-row td { animation: shimmer 1.4s infinite; background: linear-gradient(90deg, var(--card) 25%, var(--border) 50%, var(--card) 75%); background-size: 200% 100%; border-radius: 4px; color: transparent !important; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* APY delta badge */
+.apy-delta { font-size: .58rem; font-family: 'JetBrains Mono', monospace; margin-left: 3px; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+.apy-delta.up { background: rgba(52,211,153,.15); color: var(--green); }
+.apy-delta.dn { background: rgba(239,68,68,.15); color: var(--red); }
+
+/* Botao pausar atualizacoes */
+#pauseBtn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 5px; font-size: .7rem; cursor: pointer; transition: all .15s; margin-left: .5rem; }
+#pauseBtn:hover { border-color: var(--orange); color: var(--orange); }
+#pauseBtn.paused { border-color: var(--red); color: var(--red); }
+
+/* Tooltip simples */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
 </style>
 <script>
 // Enhanced wallet system
@@ -5412,6 +5448,25 @@ header{padding:.45rem .75rem}
   .controls{gap:.25rem;flex-wrap:wrap}
   .tab-section{padding:.4rem .5rem}
 }
+
+/* === MELHORIAS v2 === */
+/* Skeleton loading */
+.skeleton-row td { animation: shimmer 1.4s infinite; background: linear-gradient(90deg, var(--card) 25%, var(--border) 50%, var(--card) 75%); background-size: 200% 100%; border-radius: 4px; color: transparent !important; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* APY delta badge */
+.apy-delta { font-size: .58rem; font-family: 'JetBrains Mono', monospace; margin-left: 3px; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+.apy-delta.up { background: rgba(52,211,153,.15); color: var(--green); }
+.apy-delta.dn { background: rgba(239,68,68,.15); color: var(--red); }
+
+/* Botao pausar atualizacoes */
+#pauseBtn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 5px; font-size: .7rem; cursor: pointer; transition: all .15s; margin-left: .5rem; }
+#pauseBtn:hover { border-color: var(--orange); color: var(--orange); }
+#pauseBtn.paused { border-color: var(--red); color: var(--red); }
+
+/* Tooltip simples */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
 </style>
 
 <style id="premium-nav">
@@ -5523,5 +5578,43 @@ header::before{
   background:linear-gradient(#3b9eff,#a855f7);
   border-radius:2px;
 }
+
+/* === MELHORIAS v2 === */
+/* Skeleton loading */
+.skeleton-row td { animation: shimmer 1.4s infinite; background: linear-gradient(90deg, var(--card) 25%, var(--border) 50%, var(--card) 75%); background-size: 200% 100%; border-radius: 4px; color: transparent !important; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* APY delta badge */
+.apy-delta { font-size: .58rem; font-family: 'JetBrains Mono', monospace; margin-left: 3px; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+.apy-delta.up { background: rgba(52,211,153,.15); color: var(--green); }
+.apy-delta.dn { background: rgba(239,68,68,.15); color: var(--red); }
+
+/* Botao pausar atualizacoes */
+#pauseBtn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 5px; font-size: .7rem; cursor: pointer; transition: all .15s; margin-left: .5rem; }
+#pauseBtn:hover { border-color: var(--orange); color: var(--orange); }
+#pauseBtn.paused { border-color: var(--red); color: var(--red); }
+
+/* Tooltip simples */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 5px; font-size: .65rem; white-space: nowrap; z-index: 999; pointer-events: none; }
 </style>
+<button id="pauseBtn" title="Pausar/retomar atualizacoes automaticas" onclick="togglePause()">⏸ Pausar</button>
+<script>
+var _isPaused = false;
+function togglePause() {
+  _isPaused = !_isPaused;
+  const btn = document.getElementById('pauseBtn');
+  if (_isPaused) {
+    btn.textContent = '▶ Retomar'; btn.classList.add('paused');
+    if (window._poolRefreshInterval) clearInterval(window._poolRefreshInterval);
+    if (window._priceRefreshInterval) clearInterval(window._priceRefreshInterval);
+    if (window._myPoolInterval) clearInterval(window._myPoolInterval);
+  } else {
+    btn.textContent = '⏸ Pausar'; btn.classList.remove('paused');
+    window._poolRefreshInterval = setInterval(refreshFromAPI, REFRESH_INTERVAL);
+    window._priceRefreshInterval = setInterval(refreshPrices, PRICE_INTERVAL);
+    window._myPoolInterval = setInterval(renderMyPools, 60000);
+  }
+}
+</script>
 </body>
