@@ -1787,21 +1787,18 @@ async function openLiveLoanSearch() {
 // ── Tab Navigation
 // ══════════════════════════════════════════════════════════
 function showTab(tab) {
-  // Hide all tab sections
-  ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl'].forEach(id => {
+  // Esconde todas as abas
+  ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl','tabStrat'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  // Remove active from all tab buttons
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
 
-  // Show selected section
   if (tab === 'yield') {
     const el = document.getElementById('tabYield');
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
     const btn = document.getElementById('tab-yield');
     if (btn) btn.classList.add('active');
-    // Show toggle
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = '';
   } else if (tab === 'pools') {
@@ -1811,10 +1808,8 @@ function showTab(tab) {
     if (btn) btn.classList.add('active');
     renderApyChart();
     renderWalletBanners();
-    // Show toggle on pools tab (has LP market tables)
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = '';
-    // Render pool-specific sections
     if (typeof renderMyPools === 'function') renderMyPools();
     if (typeof renderDashboard === 'function') renderDashboard();
     if (typeof renderSimulator === 'function') renderSimulator();
@@ -1835,11 +1830,6 @@ function showTab(tab) {
     if (tw) tw.style.display = 'none';
     if (typeof renderAirdrops === 'function') renderAirdrops();
     if (typeof renderWalletBanners === 'function') renderWalletBanners();
-  }
-
-  localStorage.setItem('defiTab', tab);
-  updateTabBadges();
-}
   } else if (tab === 'hl') {
     const el = document.getElementById('tabHl');
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
@@ -1847,9 +1837,7 @@ function showTab(tab) {
     if (btn) btn.classList.add('active');
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = 'none';
-    // Carrega dados na primeira visita
     if (!window._hlLoaded) { window._hlLoaded = true; refreshHLAll(); }
-
   } else if (tab === 'strat') {
     const el = document.getElementById('tabStrat');
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
@@ -1857,7 +1845,12 @@ function showTab(tab) {
     if (btn) btn.classList.add('active');
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = 'none';
-    renderStratResults();
+    if (typeof renderStratResults === 'function') renderStratResults();
+  }
+
+  localStorage.setItem('defiTab', tab);
+  updateTabBadges();
+}
 
 function updateTabBadges() {
   // Pools badge
