@@ -121,6 +121,14 @@ td.num{font-family:'JetBrains Mono',monospace;font-size:.78rem}
 .indicator-label{color:var(--muted)}
 .indicator-val{font-family:'JetBrains Mono',monospace;font-weight:500}
 .note{margin-top:1rem;padding:.75rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:.72rem;color:var(--muted);line-height:1.5}
+.cta-banner{margin-top:2rem;padding:1.2rem 1.5rem;background:linear-gradient(135deg,rgba(244,114,182,.08) 0%,rgba(59,158,255,.06) 100%);border:1px solid rgba(244,114,182,.25);border-radius:12px}
+.cta-content{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+.cta-icon{font-size:2rem;flex-shrink:0}
+.cta-text{flex:1;min-width:200px}
+.cta-text strong{display:block;font-size:.95rem;color:var(--text);margin-bottom:.25rem}
+.cta-text span{font-size:.8rem;color:var(--muted)}
+.cta-btn{display:inline-block;padding:.6rem 1.2rem;background:var(--hype);color:#0a0c10;font-weight:700;font-size:.85rem;border-radius:8px;text-decoration:none;white-space:nowrap;transition:opacity .2s}
+.cta-btn:hover{opacity:.85}
 footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.7rem;color:var(--muted);text-align:center;line-height:1.6}
 /* My Pools Section */
 .my-pools{margin-bottom:2rem;border:1px solid var(--border);border-radius:8px;background:var(--card);padding:1.25rem}
@@ -827,6 +835,16 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <div class="panel" id="panel">
 <button class="panel-close" id="panelClose">&times;</button>
 <div id="panelContent"></div>
+</div>
+<div class="cta-banner">
+<div class="cta-content">
+<div class="cta-icon">&#129504;</div>
+<div class="cta-text">
+<strong>Uma equipe de IAs operando cripto ao vivo na Hyperliquid.</strong>
+<span>Trades reais, análise em tempo real. Grupo gratuito — planos premium em breve.</span>
+</div>
+<a href="https://t.me/+bqI9Bg1RVaw2NWNh" target="_blank" rel="noopener" class="cta-btn">Quero entrar no grupo &#8594;</a>
+</div>
 </div>
 <footer>
 Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<span class="version-tag">v1.8.0</span><br>
