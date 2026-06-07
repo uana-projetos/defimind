@@ -5085,33 +5085,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
   onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
   ☕ <span class="donate-label">Apoiar</span>
 </button>
-</script>
-
-<!-- ── SW Update Bar (aparece quando há nova versão publicada) -->
-<div id="sw-update-bar">
-  <div class="upd-txt">🚀 <strong>Atualização disponível!</strong> <span>Nova versão do DefiMind foi publicada</span></div>
-  <button class="btn-upd" onclick="applySwUpdate()">Atualizar agora</button>
-  <button class="btn-later" onclick="dismissSwUpdate()">Depois</button>
-</div>
-
-<!-- ── "O que há de novo" Modal -->
-<div id="whats-new-bg" onclick="if(event.target===this)closeWhatsNew()">
-  <div id="whats-new-modal">
-    <h3>🚀 O que há de novo <span class="wn-version">v1.8.0</span></h3>
-    <div class="wn-date">Atualizado em Mai 2026</div>
-    <div id="whats-new-entries"></div>
-    <div class="wn-footer">
-      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.78rem">Fechar</button>
-      <button onclick="closeWhatsNew()" style="padding:.4rem .9rem;border-radius:6px;background:var(--cyan);border:none;color:#000;font-weight:700;cursor:pointer;font-size:.78rem">Entendido! 🎉</button>
-    </div>
-  </div>
-</div>
-
-<button id="donate-btn" onclick="openDonateModal()" title="Apoiar o projeto DefiMind"
-  style="position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;height:40px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;cursor:pointer;font-size:1rem;box-shadow:0 4px 18px rgba(59,158,255,.35);transition:all .25s ease;display:flex;align-items:center;justify-content:center;padding:.4rem .9rem;gap:.3rem;white-space:nowrap"
-  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-  ☕ <span class="donate-label">Apoiar</span>
-</button>
 <script>
 (function(){
   var btn = document.getElementById('donate-btn');
