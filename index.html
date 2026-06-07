@@ -591,17 +591,56 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <div id="tabPools" class="tab-section" style="display:none">
   <!-- Wallet banner (shows if address saved) -->
   <div id="walletBanner"></div>
-<!-- HL Bot Wallet Card -->
-<div id="hl-bot-card" style="background:var(--card);border:1px solid rgba(244,114,182,.3);border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;position:relative;overflow:hidden">
-  <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--hype),var(--cyan))"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-    <div style="display:flex;align-items:center;gap:.5rem">
-      <span style="font-size:.85rem">&#x1F916;</span>
-      <span style="font-weight:600;font-size:.82rem">HL Bot &#x2014; Conta Perps</span>
+<!-- HL Bot Mini Dashboard -->
+<div id="hl-bot-card" style="background:var(--card);border:1px solid rgba(244,114,182,.25);border-radius:14px;margin-bottom:1rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--hype),#818cf8,var(--cyan))"></div>
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1rem .6rem">
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,rgba(244,114,182,.2),rgba(129,140,248,.2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">&#x1F916;</div>
+      <div>
+        <div style="font-weight:700;font-size:.82rem;letter-spacing:.01em">HL Bot — Uaná</div>
+        <div id="hl-bot-status-label" style="font-size:.62rem;color:var(--muted)">Carregando...</div>
+      </div>
     </div>
-    <button onclick="renderHLCard()" style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:.65rem;padding:2px 7px;cursor:pointer">&#x21BB; Atualizar</button>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <div id="hl-bot-status-dot" style="display:flex;align-items:center;gap:.3rem;background:var(--hover);border-radius:20px;padding:.2rem .55rem;font-size:.65rem;font-weight:600">
+        <span style="width:6px;height:6px;background:var(--muted);border-radius:50%;display:inline-block"></span>
+        <span>—</span>
+      </div>
+      <button onclick="renderHLCard()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:.65rem;padding:3px 8px;cursor:pointer;line-height:1.4">&#x21BB;</button>
+    </div>
   </div>
-  <div id="hl-wallet-card"><div style="color:var(--muted);font-size:.72rem">Carregando...</div></div>
+  <!-- Main metric: equity -->
+  <div style="padding:.1rem 1rem .75rem;border-bottom:1px solid var(--border)">
+    <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem">Patrimônio Total</div>
+    <div style="display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap">
+      <div id="hl-equity-big" style="font-size:1.7rem;font-weight:800;font-family:monospace;letter-spacing:-.02em">$—</div>
+      <div id="hl-pnl-badge" style="font-size:.75rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;background:var(--hover);color:var(--muted)">PnL —</div>
+    </div>
+  </div>
+  <!-- Metrics row -->
+  <div id="hl-metrics-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--border)">
+    <div style="padding:.6rem 1rem;border-right:1px solid var(--border)">
+      <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem">Disponível</div>
+      <div id="hl-withdrawable" style="font-size:.92rem;font-weight:700;font-family:monospace;color:var(--green)">—</div>
+    </div>
+    <div style="padding:.6rem 1rem;border-right:1px solid var(--border)">
+      <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem">Posições</div>
+      <div id="hl-positions-count" style="font-size:.92rem;font-weight:700;font-family:monospace">—</div>
+    </div>
+    <div style="padding:.6rem 1rem">
+      <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem">USDC Spot</div>
+      <div id="hl-spot-usdc" style="font-size:.92rem;font-weight:700;font-family:monospace">—</div>
+    </div>
+  </div>
+  <!-- Positions + Spot -->
+  <div id="hl-wallet-card" style="padding:.6rem 1rem"></div>
+  <!-- Footer -->
+  <div style="padding:.4rem 1rem .6rem;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:.6rem;color:var(--muted);font-family:monospace">0xBdF9...E32A</span>
+    <span id="hl-card-ts" style="font-size:.6rem;color:var(--muted)"></span>
+  </div>
 </div>
 
   <div class="search-bar">
@@ -5922,46 +5961,86 @@ async function fetchHLSpot(addr) {
 async function renderHLCard() {
   const card = document.getElementById('hl-wallet-card');
   if (!card) return;
-  card.innerHTML = '<div style="color:var(--muted);font-size:.72rem">Buscando dados...</div>';
+  // Update top-level elements
+  const setEl = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  setEl('hl-equity-big', '<span style="color:var(--muted);font-size:1rem">Carregando...</span>');
   try {
     const [perp, spot] = await Promise.all([fetchHLPerp(HL_BOT_ADDR), fetchHLSpot(HL_BOT_ADDR)]);
-    const equity = parseFloat(perp?.crossMarginSummary?.accountValue || 0).toFixed(2);
-    const withdrawable = parseFloat(perp?.withdrawable || 0).toFixed(2);
+    const equity = parseFloat(perp?.crossMarginSummary?.accountValue || 0);
+    const withdrawable = parseFloat(perp?.withdrawable || 0);
     const positions = perp?.assetPositions || [];
-    let posHtml = positions.length
-      ? positions.slice(0,5).map(p => {
-          const pos = p.position;
-          const pnlVal = parseFloat(pos?.unrealizedPnl || 0);
-          const col = pnlVal >= 0 ? 'var(--green)' : 'var(--red)';
-          const side = parseFloat(pos.szi) > 0 ? 'LONG' : 'SHORT';
-          const sideCol = side === 'LONG' ? 'var(--green)' : 'var(--red)';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.22rem 0;font-size:.72rem;border-bottom:1px solid var(--border)">'
-            + '<span style="font-weight:600">' + pos.coin + '</span>'
-            + '<span style="font-size:.62rem;color:' + sideCol + '">' + side + '</span>'
-            + '<span style="color:' + col + ';font-family:monospace">' + (pnlVal >= 0 ? '+' : '') + '\$' + pnlVal.toFixed(2) + '</span>'
-            + '</div>';
-        }).join('')
-      : '<div style="font-size:.72rem;color:var(--muted);text-align:center;padding:.4rem">Nenhuma posicao aberta</div>';
-    let spotBals = '';
-    if (spot?.balances?.length) {
-      const nonZero = spot.balances.filter(b => parseFloat(b.total) > 0.001);
-      if (nonZero.length) {
-        spotBals = '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;margin:.65rem 0 .3rem">Saldo Spot</div>'
-          + nonZero.map(b => '<div style="display:flex;justify-content:space-between;font-size:.72rem;border-bottom:1px solid var(--border);padding:.2rem 0"><span style="color:var(--muted)">' + b.coin + '</span><span style="font-family:monospace">' + parseFloat(b.total).toFixed(4) + '</span></div>').join('');
-      }
+    const totalPnl = positions.reduce((s, p) => s + parseFloat(p.position?.unrealizedPnl || 0), 0);
+    // Spot USDC
+    const spotUsdc = parseFloat(spot?.balances?.find(b => b.coin === 'USDC')?.total || 0);
+    const totalAssets = equity + spotUsdc;
+
+    // Status pill
+    const statusDot = document.getElementById('hl-bot-status-dot');
+    const statusLabel = document.getElementById('hl-bot-status-label');
+    if (positions.length > 0) {
+      if (statusDot) statusDot.innerHTML = '<span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span> <span style="color:var(--green)">Trading</span>';
+      if (statusLabel) statusLabel.textContent = positions.length + ' posicao(oes) aberta(s)';
+    } else {
+      if (statusDot) statusDot.innerHTML = '<span style="width:6px;height:6px;background:#f59e0b;border-radius:50%;display:inline-block;box-shadow:0 0 6px #f59e0b"></span> <span style="color:#f59e0b">Aguardando sinal</span>';
+      if (statusLabel) statusLabel.textContent = 'Bot ativo — buscando entrada';
     }
-    card.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.6rem">'
-      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Equity</div><div style="font-family:monospace;font-size:.88rem;font-weight:700">\$' + equity + '</div></div>'
-      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Disponivel</div><div style="font-family:monospace;font-size:.88rem;font-weight:700;color:var(--green)">\$' + withdrawable + '</div></div>'
-      + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .65rem"><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-bottom:.15rem">Posicoes</div><div style="font-family:monospace;font-size:.88rem;font-weight:700">' + positions.length + '</div></div>'
-      + '</div>'
-      + (positions.length ? '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem">Posicoes abertas</div>' + posHtml : posHtml)
-      + spotBals
-      + '<div style="font-size:.6rem;color:var(--muted);margin-top:.6rem;text-align:right">'
-      + HL_BOT_ADDR.slice(0,6) + '...' + HL_BOT_ADDR.slice(-4)
-      + '</div>';
+
+    // Big equity
+    setEl('hl-equity-big', '$' + totalAssets.toFixed(2));
+    // PnL badge
+    const pnlEl = document.getElementById('hl-pnl-badge');
+    if (pnlEl) {
+      const pnlCol = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+      const pnlBg = totalPnl >= 0 ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)';
+      pnlEl.style.background = pnlBg;
+      pnlEl.style.color = pnlCol;
+      pnlEl.textContent = 'PnL ' + (totalPnl >= 0 ? '+' : '') + '$' + totalPnl.toFixed(2);
+    }
+    // Metrics row
+    setEl('hl-withdrawable', '$' + withdrawable.toFixed(2));
+    setEl('hl-positions-count', positions.length === 0 ? '<span style="color:var(--muted)">0</span>' : '<span style="color:var(--hype)">' + positions.length + '</span>');
+    setEl('hl-spot-usdc', '$' + spotUsdc.toFixed(2));
+
+    // Positions list
+    let posHtml = '';
+    if (positions.length) {
+      posHtml = '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem">Posicoes abertas</div>';
+      posHtml += positions.slice(0,5).map(p => {
+        const pos = p.position;
+        const pnlVal = parseFloat(pos?.unrealizedPnl || 0);
+        const side = parseFloat(pos.szi) > 0 ? 'LONG' : 'SHORT';
+        const sideCol = side === 'LONG' ? 'var(--green)' : 'var(--red)';
+        const pnlCol = pnlVal >= 0 ? 'var(--green)' : 'var(--red)';
+        const entryPx = parseFloat(pos.entryPx || 0);
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border)">'
+          + '<div style="display:flex;align-items:center;gap:.5rem">'
+          + '<span style="font-weight:700;font-size:.8rem">' + pos.coin + '</span>'
+          + '<span style="font-size:.6rem;background:' + (side==='LONG'?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)') + ';color:' + sideCol + ';padding:.1rem .35rem;border-radius:3px">' + side + '</span>'
+          + '</div>'
+          + '<span style="font-size:.68rem;color:var(--muted)">entry $' + entryPx.toFixed(2) + '</span>'
+          + '<span style="font-weight:700;font-size:.8rem;color:' + pnlCol + ';font-family:monospace">' + (pnlVal >= 0 ? '+' : '') + '$' + pnlVal.toFixed(2) + '</span>'
+          + '</div>';
+      }).join('');
+    }
+
+    // Spot non-zero (excluding USDC shown above)
+    let spotHtml = '';
+    const nonZeroSpot = (spot?.balances || []).filter(b => b.coin !== 'USDC' && parseFloat(b.total) > 0.0001);
+    if (nonZeroSpot.length) {
+      spotHtml = '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .3rem">Outros ativos spot</div>'
+        + nonZeroSpot.map(b => '<div style="display:flex;justify-content:space-between;font-size:.75rem;padding:.2rem 0;border-bottom:1px solid var(--border)">'
+          + '<span style="color:var(--muted)">' + b.coin + '</span>'
+          + '<span style="font-family:monospace">' + parseFloat(b.total).toFixed(6) + '</span>'
+          + '</div>').join('');
+    }
+
+    card.innerHTML = posHtml + spotHtml || '<div style="text-align:center;padding:.5rem;font-size:.75rem;color:var(--muted)">Sem posicoes abertas — aguardando sinal</div>';
+
+    // Timestamp
+    setEl('hl-card-ts', 'Atualizado ' + new Date().toLocaleTimeString('pt-BR'));
   } catch(e) {
-    card.innerHTML = '<div style="color:var(--muted);font-size:.72rem">API HL indisponivel. Tente novamente.</div>';
+    setEl('hl-equity-big', '<span style="color:var(--red);font-size:1rem">Erro API</span>');
+    if (card) card.innerHTML = '<div style="color:var(--muted);font-size:.72rem;text-align:center;padding:.5rem">API HL indisponivel. Tente novamente.</div>';
   }
 }
 
