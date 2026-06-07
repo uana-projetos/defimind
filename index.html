@@ -348,6 +348,23 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 .tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);background:rgba(59,158,255,.06)}
 .tab-btn .tab-icon{font-size:1rem}
 .tab-badge{background:var(--cyan);color:#0d1117;font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 5px;margin-left:.2rem;line-height:1.4}
+.strat-obj-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;cursor:pointer;text-align:left;transition:all .18s;width:100%}
+.strat-obj-btn:hover{border-color:var(--purple);background:rgba(167,139,250,.06)}
+.strat-obj-btn.active{border-color:var(--purple);background:rgba(167,139,250,.1);box-shadow:0 0 0 1px rgba(167,139,250,.3)}
+.strat-obj-icon{font-size:1.3rem;margin-bottom:.3rem}
+.strat-obj-name{font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.15rem}
+.strat-obj-desc{font-size:.68rem;color:var(--muted);line-height:1.4}
+.strat-asset-btn{background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:.25rem .65rem;font-size:.72rem;color:var(--muted);cursor:pointer;transition:all .15s}
+.strat-asset-btn.active,.strat-asset-btn:hover{background:rgba(167,139,250,.15);border-color:var(--purple);color:var(--purple)}
+.strat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:grid;grid-template-columns:1fr auto;gap:.4rem .75rem;align-items:start;transition:border-color .15s}
+.strat-card:hover{border-color:rgba(167,139,250,.4)}
+.strat-card-name{font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strat-card-meta{font-size:.68rem;color:var(--muted)}
+.strat-card-apy{font-size:1.1rem;font-weight:800;font-family:monospace;color:var(--green);text-align:right}
+.strat-card-tvl{font-size:.68rem;color:var(--muted);text-align:right}
+.strat-card-tags{grid-column:1/-1;display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.15rem}
+.strat-tag{font-size:.6rem;padding:.1rem .4rem;border-radius:3px;font-weight:600}
+.strat-section-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
 /* hide top-toggle when not on yield tab */
 .controls-yield{transition:opacity .18s}
 /* section transitions */
@@ -566,6 +583,9 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
   </button>
   <button class="tab-btn" id="tab-hl" onclick="showTab('hl')" style="color:var(--hype)">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Hyperliquid
+  </button>
+  <button class="tab-btn" id="tab-strat" onclick="showTab('strat')" style="color:#a78bfa">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Estratégias
   </button>
 </nav>
 <div class="notif-bar" id="notifBar"></div>
@@ -1812,6 +1832,15 @@ function showTab(tab) {
     // Carrega dados na primeira visita
     if (!window._hlLoaded) { window._hlLoaded = true; refreshHLAll(); }
 
+  } else if (tab === 'strat') {
+    const el = document.getElementById('tabStrat');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-strat');
+    if (btn) btn.classList.add('active');
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = 'none';
+    renderStratResults();
+
 function updateTabBadges() {
   // Pools badge
   try {
@@ -2070,6 +2099,7 @@ async function refreshFromAPI() {
     const res = await fetch('https://yields.llama.fi/pools', { signal: AbortSignal.timeout(15000) });
     const json = await res.json();
     const pools = json.data || [];
+  window._allPools = pools; // cache para Estratégias
     const newPools = {ETH:[],BTC:[],SOL:[],HYPE:[],STOCKS:[],INDEX:[],METALS:[],RWA:[],STABLE:[]};
 
     for (const p of pools) {
@@ -5060,6 +5090,79 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWhats
 
 </script>
 
+<!-- ── TAB: ESTRATÉGIAS ─────────────────────────────────────────── -->
+<div id="tabStrat" class="tab-section" style="display:none">
+
+  <!-- Objetivo selector -->
+  <div style="padding:1rem 0 .5rem">
+    <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Qual é o seu objetivo?</div>
+    <div id="strat-objectives" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem">
+
+      <button class="strat-obj-btn active" data-obj="stable" onclick="selectObjective('stable')">
+        <div class="strat-obj-icon">🪙</div>
+        <div class="strat-obj-name">Yield Estável</div>
+        <div class="strat-obj-desc">USDC/USDT sem risco direcional</div>
+      </button>
+
+      <button class="strat-obj-btn" data-obj="fees" onclick="selectObjective('fees')">
+        <div class="strat-obj-icon">🏦</div>
+        <div class="strat-obj-name">Coletar Taxas</div>
+        <div class="strat-obj-desc">Máximo APY em pools ativos</div>
+      </button>
+
+      <button class="strat-obj-btn" data-obj="dca_buy" onclick="selectObjective('dca_buy')">
+        <div class="strat-obj-icon">📥</div>
+        <div class="strat-obj-name">DCA Compra</div>
+        <div class="strat-obj-desc">Acumular ativo gradualmente</div>
+      </button>
+
+      <button class="strat-obj-btn" data-obj="dca_sell" onclick="selectObjective('dca_sell')">
+        <div class="strat-obj-icon">📤</div>
+        <div class="strat-obj-name">DCA Venda</div>
+        <div class="strat-obj-desc">Vender posição gradualmente</div>
+      </button>
+
+      <button class="strat-obj-btn" data-obj="staking" onclick="selectObjective('staking')">
+        <div class="strat-obj-icon">⚡</div>
+        <div class="strat-obj-name">Staking</div>
+        <div class="strat-obj-desc">APY puro, sem impermanent loss</div>
+      </button>
+
+      <button class="strat-obj-btn" data-obj="hold" onclick="selectObjective('hold')">
+        <div class="strat-obj-icon">💎</div>
+        <div class="strat-obj-name">Hold + Renda</div>
+        <div class="strat-obj-desc">Acredita no ativo e quer yield</div>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Explicação da estratégia -->
+  <div id="strat-explanation" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin:.75rem 0;display:none">
+    <div id="strat-exp-title" style="font-weight:700;font-size:.85rem;margin-bottom:.4rem"></div>
+    <div id="strat-exp-body" style="font-size:.78rem;color:var(--muted);line-height:1.55"></div>
+    <div id="strat-exp-risk" style="margin-top:.5rem;font-size:.72rem"></div>
+  </div>
+
+  <!-- Filtro de ativo (para DCA) -->
+  <div id="strat-asset-filter" style="display:none;margin-bottom:.75rem">
+    <div style="font-size:.7rem;color:var(--muted);margin-bottom:.4rem">Filtrar por ativo:</div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <button class="strat-asset-btn active" data-asset="" onclick="selectStratAsset(this,'')">Todos</button>
+      <button class="strat-asset-btn" data-asset="BTC" onclick="selectStratAsset(this,'BTC')">BTC</button>
+      <button class="strat-asset-btn" data-asset="ETH" onclick="selectStratAsset(this,'ETH')">ETH</button>
+      <button class="strat-asset-btn" data-asset="SOL" onclick="selectStratAsset(this,'SOL')">SOL</button>
+      <button class="strat-asset-btn" data-asset="USDC" onclick="selectStratAsset(this,'USDC')">USDC</button>
+      <button class="strat-asset-btn" data-asset="USDT" onclick="selectStratAsset(this,'USDT')">USDT</button>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div id="strat-loading" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:.82rem">⏳ Analisando pools...</div>
+  <div id="strat-results"></div>
+
+</div>
+
 <!-- ── SW Update Bar (aparece quando há nova versão publicada) -->
 <div id="sw-update-bar">
   <div class="upd-txt">🚀 <strong>Atualização disponível!</strong> <span>Nova versão do DefiMind foi publicada</span></div>
@@ -6520,6 +6623,188 @@ async function loadHLStaking() {
   }
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// ESTRATÉGIAS POR OBJETIVO
+// ═══════════════════════════════════════════════════════════════
+let _currentObj = 'stable';
+let _currentAsset = '';
+
+const STRAT_CONFIG = {
+  stable: {
+    title: '🪙 Yield Estável — Stablecoins',
+    body: 'Fornece liquidez em pares estáveis (USDC/USDT/DAI). Praticamente zero impermanent loss. Ideal para quem quer rendimento sem risco direcional — equivale a uma renda fixa DeFi.',
+    risk: '🟢 Risco baixo · Sem IL · Ideal para capital de reserva',
+    riskColor: 'var(--green)',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      return (sym.includes('USDC')||sym.includes('USDT')||sym.includes('DAI')||sym.includes('FRAX')||sym.includes('LUSD')||sym.includes('CRVUSD'))
+        && p.apy > 0 && p.tvlUsd > 100000;
+    }),
+    sort: pools => pools.sort((a,b) => b.apy - a.apy),
+    showAssetFilter: false,
+  },
+  fees: {
+    title: '🏦 Coletar Taxas — Máximo APY',
+    body: 'Pools com alto volume em relação ao TVL geram mais taxas. Aceita volatilidade e impermanent loss em troca de APY elevado. Funciona melhor com pares que você já quer segurar de qualquer forma.',
+    risk: '🟡 Risco médio · IL possível · Ideal para ativos voláteis que você já tem',
+    riskColor: '#f59e0b',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      const notStable = !sym.includes('USDC')&&!sym.includes('USDT')&&!sym.includes('DAI')&&!sym.includes('FRAX');
+      return notStable && p.apy > 5 && p.tvlUsd > 50000;
+    }),
+    sort: pools => pools.sort((a,b) => b.apy - a.apy),
+    showAssetFilter: true,
+  },
+  dca_buy: {
+    title: '📥 DCA Compra — Acumular Gradualmente',
+    body: 'Coloca liquidez concentrada ABAIXO do preço atual (Uniswap V3 / Camelot). Enquanto o ativo não cair até seu range, você coleta taxas. Se cair, você "compra" na faixa escolhida automaticamente. Estratégia clássica de acumulação com geração de renda.',
+    risk: '🟡 Risco médio · Você define o preço de compra · Funciona em Uniswap V3, Camelot, Orca',
+    riskColor: '#f59e0b',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      const proj = (p.project||'').toLowerCase();
+      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('aerodrome');
+      return isDex && p.apy > 0 && p.tvlUsd > 100000;
+    }),
+    sort: pools => pools.sort((a,b) => b.tvlUsd - a.tvlUsd),
+    showAssetFilter: true,
+  },
+  dca_sell: {
+    title: '📤 DCA Venda — Realizar Gradualmente',
+    body: 'Coloca liquidez concentrada ACIMA do preço atual. Enquanto não atingir seu range, coleta taxas. Quando o preço subir até lá, você vai vendendo gradualmente. Ideal para quem tem um preço-alvo de saída e quer ganhar enquanto espera.',
+    risk: '🟡 Risco médio · Você define o preço de venda · Mesmos protocolos do DCA Compra',
+    riskColor: '#f59e0b',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      const proj = (p.project||'').toLowerCase();
+      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('aerodrome');
+      return isDex && p.apy > 0 && p.tvlUsd > 100000;
+    }),
+    sort: pools => pools.sort((a,b) => b.apy - a.apy),
+    showAssetFilter: true,
+  },
+  staking: {
+    title: '⚡ Staking — APY Puro Sem IL',
+    body: 'Faz staking diretamente ou usa liquid staking (stETH, rETH, kHYPE). Zero impermanent loss. O ativo permanece exposto ao preço mas você acumula mais tokens ao longo do tempo. Ideal para quem pensa em 6-12+ meses.',
+    risk: '🟢 Risco baixo-médio · Sem IL · Exposição ao preço do ativo',
+    riskColor: 'var(--green)',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      const proj = (p.project||'').toLowerCase();
+      return (proj.includes('lido')||proj.includes('rocket')||proj.includes('staking')||proj.includes('kinetiq')||
+              sym.includes('STETH')||sym.includes('RETH')||sym.includes('CBETH')||sym.includes('WSTETH')||
+              sym.includes('KHYPE')||sym.includes('MSOL')||sym.includes('JITOSOL'))
+        && p.apy > 0;
+    }),
+    sort: pools => pools.sort((a,b) => b.apy - a.apy),
+    showAssetFilter: false,
+  },
+  hold: {
+    title: '💎 Hold + Renda — Acredita no Ativo',
+    body: 'Você já quer segurar o ativo por convicção. Então por que não ganhar yield em cima? Fornece liquidez em pares como ETH/USDC ou BTC/USDC. Aceita o IL porque de qualquer jeito não iria vender. Otimiza: pool com TVL alto + projeto confiável + APY razoável.',
+    risk: '🟡 IL existe, mas você já estava exposto ao ativo de qualquer forma',
+    riskColor: '#f59e0b',
+    filter: pools => pools.filter(p => {
+      const sym = (p.symbol||'').toUpperCase();
+      const hasMajor = sym.includes('ETH')||sym.includes('BTC')||sym.includes('SOL')||sym.includes('HYPE');
+      return hasMajor && p.apy > 2 && p.tvlUsd > 500000;
+    }),
+    sort: pools => pools.sort((a,b) => (b.tvlUsd*b.apy) - (a.tvlUsd*a.apy)),
+    showAssetFilter: true,
+  },
+};
+
+function selectObjective(obj) {
+  _currentObj = obj;
+  _currentAsset = '';
+  document.querySelectorAll('.strat-obj-btn').forEach(b => b.classList.toggle('active', b.dataset.obj === obj));
+  document.querySelectorAll('.strat-asset-btn').forEach(b => { if(b.dataset.asset==='') b.classList.add('active'); else b.classList.remove('active'); });
+  renderStratResults();
+}
+
+function selectStratAsset(btn, asset) {
+  _currentAsset = asset;
+  document.querySelectorAll('.strat-asset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStratResults();
+}
+
+function renderStratResults() {
+  const cfg = STRAT_CONFIG[_currentObj];
+  if (!cfg) return;
+
+  // Mostrar explicação
+  const expEl = document.getElementById('strat-explanation');
+  document.getElementById('strat-exp-title').textContent = cfg.title;
+  document.getElementById('strat-exp-body').textContent = cfg.body;
+  document.getElementById('strat-exp-risk').innerHTML = `<span style="color:${cfg.riskColor}">${cfg.risk}</span>`;
+  expEl.style.display = '';
+
+  // Filtro de ativo
+  const assetFilter = document.getElementById('strat-asset-filter');
+  assetFilter.style.display = cfg.showAssetFilter ? '' : 'none';
+
+  // Usar dados já carregados pelo app principal
+  const allPools = window._allPools || [];
+  if (!allPools.length) {
+    document.getElementById('strat-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">⏳ Aguardando dados dos pools... Volte em alguns segundos.</div>';
+    return;
+  }
+
+  let filtered = cfg.filter(allPools);
+
+  // Filtro de ativo adicional
+  if (_currentAsset) {
+    filtered = filtered.filter(p => (p.symbol||'').toUpperCase().includes(_currentAsset));
+  }
+
+  filtered = cfg.sort(filtered).slice(0, 20);
+
+  if (!filtered.length) {
+    document.getElementById('strat-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Nenhum pool encontrado para este filtro.</div>';
+    return;
+  }
+
+  const cards = filtered.map((p, i) => {
+    const apy = p.apy ? p.apy.toFixed(1) + '%' : '—';
+    const tvl = p.tvlUsd ? '$' + fmt2(p.tvlUsd) : '—';
+    const chain = p.chain || '';
+    const proj = p.project || '';
+    const sym = p.symbol || '';
+
+    // Tags
+    const tags = [];
+    if (p.apy > 50) tags.push({label:'🔥 Alto APY', bg:'rgba(239,68,68,.15)', col:'var(--red)'});
+    if (p.tvlUsd > 10e6) tags.push({label:'🐋 TVL Alto', bg:'rgba(59,158,255,.1)', col:'var(--cyan)'});
+    if ((sym.includes('USDC')||sym.includes('USDT')||sym.includes('DAI'))) tags.push({label:'💵 Estável', bg:'rgba(34,197,94,.1)', col:'var(--green)'});
+    if (p.apy > 0 && p.apy < 15) tags.push({label:'✅ APY sustentável', bg:'rgba(34,197,94,.08)', col:'var(--green)'});
+    if ((proj.includes('uniswap')||proj.includes('curve')||proj.includes('aave'))) tags.push({label:'🛡️ Protocolo confiável', bg:'rgba(167,139,250,.1)', col:'var(--purple)'});
+
+    const tagHtml = tags.map(t => `<span class="strat-tag" style="background:${t.bg};color:${t.col}">${t.label}</span>`).join('');
+
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+
+    return `<div class="strat-card">
+      <div>
+        <div class="strat-card-name">${medal} ${sym}</div>
+        <div class="strat-card-meta">${proj} · ${chain}</div>
+      </div>
+      <div>
+        <div class="strat-card-apy">${apy}</div>
+        <div class="strat-card-tvl">TVL ${tvl}</div>
+      </div>
+      <div class="strat-card-tags">${tagHtml}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('strat-results').innerHTML = `
+    <div class="strat-section-title">Top ${filtered.length} pools para essa estratégia</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem">${cards}</div>
+    <div style="font-size:.62rem;color:var(--muted);margin-top:.75rem;text-align:center">Dados: DefiLlama · Não é recomendação financeira · Verifique IL e riscos antes de entrar</div>
+  `;
+}
 async function refreshHLAll() {
   await Promise.all([loadHLFunding(), loadHLVaults(), loadHLLend(), loadHLSpot(), loadHLEvm(), loadHLStaking()]);
 }
