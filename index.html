@@ -372,6 +372,10 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 .strat-card-tvl{font-size:.68rem;color:var(--muted);text-align:right}
 .strat-card-tags{grid-column:1/-1;display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.15rem}
 .strat-tag{font-size:.6rem;padding:.1rem .4rem;border-radius:3px;font-weight:600}
+.coin-icon{width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;vertical-align:middle}
+.coin-icon-sm{width:16px;height:16px;border-radius:50%;object-fit:cover;flex-shrink:0;vertical-align:middle}
+.coin-icon-lg{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.coin-icon-wrap{display:inline-flex;align-items:center;gap:.35rem}
 .strat-section-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
 /* hide top-toggle when not on yield tab */
 .controls-yield{transition:opacity .18s}
@@ -6104,7 +6108,7 @@ async function renderHLCard() {
         const entryPx = parseFloat(pos.entryPx || 0);
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border)">'
           + '<div style="display:flex;align-items:center;gap:.5rem">'
-          + '<span style="font-weight:700;font-size:.8rem">' + pos.coin + '</span>'
+          + '<span class="coin-icon-wrap" style="font-weight:700;font-size:.8rem">' + coinIcon(pos.coin,'sm') + '<span>' + pos.coin + '</span></span>'
           + '<span style="font-size:.6rem;background:' + (side==='LONG'?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)') + ';color:' + sideCol + ';padding:.1rem .35rem;border-radius:3px">' + side + '</span>'
           + '</div>'
           + '<span style="font-size:.68rem;color:var(--muted)">entry $' + entryPx.toFixed(2) + '</span>'
@@ -6119,7 +6123,7 @@ async function renderHLCard() {
     if (nonZeroSpot.length) {
       spotHtml = '<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .3rem">Outros ativos spot</div>'
         + nonZeroSpot.map(b => '<div style="display:flex;justify-content:space-between;font-size:.75rem;padding:.2rem 0;border-bottom:1px solid var(--border)">'
-          + '<span style="color:var(--muted)">' + b.coin + '</span>'
+          + '<span class="coin-icon-wrap">' + coinIcon(b.coin,'sm') + '<span style="color:var(--muted)">' + b.coin + '</span></span>'
           + '<span style="font-family:monospace">' + parseFloat(b.total).toFixed(6) + '</span>'
           + '</div>').join('');
     }
@@ -6251,7 +6255,7 @@ function filterHLFunding() {
                      : x.mark >= 1 ? '$' + x.mark.toFixed(4)
                      : '$' + x.mark.toFixed(6);
         return '<tr>'
-          + '<td style="font-weight:600">' + x.name + '</td>'
+          + '<td style="font-weight:600"><div class="coin-icon-wrap">' + coinIcon(x.name,'sm') + '<span>' + x.name + '</span></div></td>'
           + '<td style="font-family:monospace">' + mark + '</td>'
           + '<td class="' + cls + '">' + (x.frPct >= 0 ? '+' : '') + x.frPct.toFixed(4) + '%</td>'
           + '<td>' + '<span class="' + cls + '">' + (x.frApy >= 0 ? '+' : '') + x.frApy.toFixed(2) + '% APY</span>' + bar + '</td>'
@@ -6396,7 +6400,7 @@ function renderHLSpot() {
                        : x.mark >= 1  ? '$' + x.mark.toFixed(4)
                        : '$' + x.mark.toFixed(8);
         return '<tr>'
-          + '<td style="font-weight:600">' + x.pair + '</td>'
+          + '<td style="font-weight:600"><div class="coin-icon-wrap">' + coinIcon(x.pair.replace('/USDC','').replace('/USD',''),'sm') + '<span>' + x.pair + '</span></div></td>'
           + '<td style="font-family:monospace">' + mark + '</td>'
           + '<td style="font-family:monospace;color:' + chgCol + '">' + (x.chg >= 0 ? '+' : '') + x.chg.toFixed(2) + '%</td>'
           + '<td style="font-family:monospace">' + fmtB(x.vol) + '</td>'
@@ -6636,6 +6640,46 @@ async function loadHLStaking() {
 
 
 // ═══════════════════════════════════════════════════════════════
+// COIN ICONS — CDN spothq/cryptocurrency-icons + CoinGecko fallback
+// ═══════════════════════════════════════════════════════════════
+
+// Mapeamento de slugs alternativos (símbolo → nome no CDN)
+const COIN_ICON_MAP = {
+  'WBTC':'btc','WETH':'eth','WSOL':'sol','WBNB':'bnb','WAVAX':'avax',
+  'STETH':'eth','WSTETH':'eth','RETH':'eth','CBETH':'eth',
+  'MSOL':'sol','JITOSOL':'sol','BSOL':'sol',
+  'USDC.E':'usdc','USDC.E':'usdc','USDT.E':'usdt',
+  'USDBC':'usdc','USDbC':'usdc',
+  'FRAXETH':'frax','SFRXETH':'frax',
+  'DAI':'dai','SDAI':'dai','WXDAI':'dai',
+  'CRVUSD':'crv','SCRVUSD':'crv',
+  'WMATIC':'matic','WPOL':'matic',
+  'WFTM':'ftm','WONE':'one',
+  'HYPE':'hype','KHYPE':'hype',
+  'UBTC':'btc','UETH':'eth',
+};
+
+// Gera HTML do ícone — usa CDN com fallback para iniciais coloridas
+function coinIcon(symbol, size='md') {
+  const raw = (symbol || '').replace(/[-\/].*/,'').toUpperCase().trim();
+  const key = COIN_ICON_MAP[raw] || raw.toLowerCase();
+  const cls = size === 'sm' ? 'coin-icon-sm' : size === 'lg' ? 'coin-icon-lg' : 'coin-icon';
+  const px  = size === 'sm' ? 16 : size === 'lg' ? 28 : 20;
+  const cdnUrl = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/32/color/${key}.png`;
+  // Cores de fallback por letra
+  const colors = {'A':'#f59e0b','B':'#f97316','C':'#3b82f6','D':'#8b5cf6','E':'#06b6d4','F':'#10b981','G':'#eab308','H':'#ec4899','I':'#6366f1','J':'#14b8a6','K':'#f43f5e','L':'#84cc16','M':'#a78bfa','N':'#fb923c','O':'#38bdf8','P':'#4ade80','Q':'#facc15','R':'#f87171','S':'#34d399','T':'#60a5fa','U':'#c084fc','V':'#fb7185','W':'#fbbf24','X':'#a3e635','Y':'#67e8f9','Z':'#f9a8d4'};
+  const col = colors[raw[0]] || '#6b7280';
+  const initials = raw.slice(0,3);
+  return `<img class="${cls}" src="${cdnUrl}" width="${px}" height="${px}" alt="${raw}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'" /><span style="display:none;width:${px}px;height:${px}px;border-radius:50%;background:${col};color:#fff;font-size:${Math.round(px*0.38)}px;font-weight:700;align-items:center;justify-content:center;flex-shrink:0">${initials}</span>`;
+}
+
+// Versão só do src para usar em img existentes
+function coinIconSrc(symbol) {
+  const raw = (symbol || '').replace(/[-\/].*/,'').toUpperCase().trim();
+  const key = COIN_ICON_MAP[raw] || raw.toLowerCase();
+  return `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/32/color/${key}.png`;
+}
+// ═══════════════════════════════════════════════════════════════
 // ESTRATÉGIAS POR OBJETIVO
 // ═══════════════════════════════════════════════════════════════
 let _currentObj = 'stable';
@@ -6799,7 +6843,7 @@ function renderStratResults() {
 
     return `<div class="strat-card">
       <div>
-        <div class="strat-card-name">${medal} ${sym}</div>
+        <div class="strat-card-name" style="display:flex;align-items:center;gap:.4rem">${medal} ${coinIcon(sym.split("/")[0],"sm")}<span>${sym}</span></div>
         <div class="strat-card-meta">${proj} · ${chain}</div>
       </div>
       <div>
