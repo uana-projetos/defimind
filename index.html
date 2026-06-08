@@ -1957,7 +1957,7 @@ function renderSections() {
     else if (cat === 'METALS') extraHeader = '<th>Metal</th><th>Par</th>';
     section.innerHTML = `
       <div class="section-title" style="color:${meta.color}">
-        ${meta.icon} Pools ${cat} ${titleExtra}
+        <div class="coin-icon-wrap">${meta.icon} ${['ETH','BTC','SOL','HYPE','STABLE'].includes(cat) ? coinIcon(cat,'md') : ''} Pools ${cat} ${titleExtra}</div>
         ${tech ? `<span class="mono" style="font-size:.75rem;color:var(--muted);margin-left:auto">${fmtPrice(tech.price)}</span>` : ''}
       </div>
       <table>
@@ -1974,7 +1974,7 @@ function renderSections() {
             else if (cat === 'METALS') extraCols = `<td><span style="color:#fbbf24;font-weight:500;font-size:.75rem">${p.metal || ''}</span></td><td><span class="chain-tag">${p.pair_type || ''}</span></td>`;
             return `
             <tr data-cat="${cat}" data-idx="${i}" onclick="openPanel('${cat}',${i})">
-              <td class="pool-name">${p.symbol}</td>
+              <td class="pool-name"><div class="coin-icon-wrap">${coinIcon(p.symbol.split('-')[0].split('/')[0].split(' ')[0],'sm')}<span>${p.symbol}</span></div></td>
               ${extraCols}
               <td class="protocol-tag">${p.project}</td>
               <td><span class="chain-tag">${p.chain}</span></td>
