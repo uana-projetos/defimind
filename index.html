@@ -239,8 +239,18 @@ footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-
   table{display:block;overflow-x:auto;white-space:nowrap}
   .section-header{flex-direction:column;align-items:flex-start;gap:.4rem}
   .btn{font-size:.72rem;padding:6px 10px}
+  /* Tab nav mobile: hide text, show only icons */
+  .tab-btn .tab-text{display:none}
+  .tab-btn{min-width:44px !important;padding:.6rem .3rem !important}
+  .tab-btn svg{width:16px !important;height:16px !important}
+  .tab-badge{font-size:.5rem !important;padding:1px 4px !important}
 }
 
+/* ── Wallet Tab ── */
+.wallet-tab-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.wallet-tab-title{font-size:1rem;font-weight:700;color:var(--cyan);display:flex;align-items:center;gap:.4rem}
+.wallet-section{margin-bottom:1.5rem}
+.wallet-section-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
 /* ── Loans Module ── */
 .loans-section{margin-top:1.5rem}
 .loan-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:.6rem;transition:border-color .2s}
@@ -582,22 +592,27 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Yield
   </button>
   <button class="tab-btn" id="tab-pools" onclick="showTab('pools')">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><path d="M2 12c.6.5 1.2 1 2.5 1C7 13 7 11 9.5 11s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><path d="M2 7c.6.5 1.2 1 2.5 1C7 8 7 6 9.5 6s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/></svg> Pools
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><path d="M2 12c.6.5 1.2 1 2.5 1C7 13 7 11 9.5 11s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><path d="M2 7c.6.5 1.2 1 2.5 1C7 8 7 6 9.5 6s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/></svg> <span class="tab-text">Pools</span>
     <span class="tab-badge" id="poolsBadge" style="display:none">0</span>
   </button>
   <button class="tab-btn" id="tab-loans" onclick="showTab('loans')">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Empréstimos
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> <span class="tab-text">Empréstimos</span>
     <span class="tab-badge" id="loansBadge" style="display:none">0</span>
   </button>
   <button class="tab-btn" id="tab-airdrops" onclick="showTab('airdrops')">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Airdrops
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <span class="tab-text">Airdrops</span>
     <span class="tab-badge" id="airdropBadge" style="background:#a78bfa;display:none">0</span>
   </button>
-  <button class="tab-btn" id="tab-hl" onclick="showTab('hl')" style="color:var(--hype)">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Hyperliquid
+  <button class="tab-btn" id="tab-wallet" onclick="showTab('wallet')" style="color:var(--cyan)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 12h2"/><circle cx="17" cy="12" r="1"/></svg>
+    <span class="tab-text"> Carteira</span>
+    <span class="tab-badge" id="walletBadge" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" id="tab-hl" onclick="showTab('hl')"  style="color:var(--hype)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> <span class="tab-text">Hyperliquid</span>
   </button>
   <button class="tab-btn" id="tab-strat" onclick="showTab('strat')" style="color:#a78bfa">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Estratégias
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <span class="tab-text">Estratégias</span>
   </button>
 </nav>
 <div class="notif-bar" id="notifBar"></div>
@@ -624,8 +639,7 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 
 <!-- ── TAB: POOLS (LP + Minhas Pools + Sim) ── -->
 <div id="tabPools" class="tab-section" style="display:none">
-  <!-- Wallet banner (shows if address saved) -->
-  <div id="walletBanner"></div>
+  <!-- walletBanner moved to tab Carteira -->
 <!-- HL Bot Mini Dashboard -->
 <div id="hl-bot-card" style="background:var(--card);border:1px solid rgba(244,114,182,.25);border-radius:14px;margin-bottom:1rem;position:relative;overflow:hidden">
   <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--hype),#818cf8,var(--cyan))"></div>
@@ -709,8 +723,39 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
   <div id="airdropContent"></div>
 </div>
 
+<!-- ── TAB: CARTEIRA ───────────────────────── -->
+<div id="tabWallet" class="tab-section" style="display:none">
+  <div class="wallet-tab-header">
+    <div class="wallet-tab-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 12h2"/><circle cx="17" cy="12" r="1"/></svg>
+      Minhas Carteiras
+    </div>
+    <button onclick="openWalletModal()" style="background:none;border:1px solid rgba(59,158,255,.4);border-radius:6px;color:var(--cyan);font-size:.72rem;padding:5px 10px;cursor:pointer">+ Adicionar</button>
+  </div>
+  <div class="wallet-section">
+    <div class="wallet-section-label">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Carteiras monitoradas (read-only)
+    </div>
+    <div id="walletBannerMain"></div>
+  </div>
+</div>
+
 <!-- ── TAB: EMPRÉSTIMOS ───────────────────── -->
 <div id="tabLoans" class="tab-section" style="display:none">
+  <!-- Taxas ao Vivo dos principais protocolos -->
+  <div id="loanLiveRates" style="margin-bottom:1rem">
+    <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem">
+      <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s infinite"></span>
+      Taxas ao Vivo — Principais Protocolos
+    </div>
+    <div id="loanRatesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;text-align:center">
+        <div style="font-size:.65rem;color:var(--muted);margin-bottom:.2rem">Carregando...</div>
+        <div style="font-size:.8rem;font-weight:600;color:var(--muted)">—</div>
+      </div>
+    </div>
+  </div>
   <div class="loan-search-bar">
     <input class="search-input" id="loanSearchInput" type="text" placeholder="🔍 Buscar ativo... ETH, USDC, BTC..." oninput="filterLoansView()">
     <select class="search-select" id="loanChainFilter" onchange="filterLoansView()">
@@ -840,7 +885,7 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <button class="panel-close" id="panelClose">&times;</button>
 <div id="panelContent"></div>
 </div>
-<div class="cta-banner">
+<div class="cta-banner" id="global-cta">
 <div class="cta-content">
 <div class="cta-icon">&#129504;</div>
 <div class="cta-text">
@@ -850,7 +895,7 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <a href="https://t.me/+bqI9Bg1RVaw2NWNh" target="_blank" rel="noopener" class="cta-btn">Quero entrar no grupo &#8594;</a>
 </div>
 </div>
-<footer>
+<footer id="global-footer">
 Dados: DefiLlama Yields API + CoinGecko via análise técnica | Protocolos: Uniswap v3/v4, Orca, Raydium, ProjectX (Hyperliquid), Camelot<span class="version-tag">v1.8.0</span><br>
 Este painel é informativo. Não constitui recomendação financeira. Verifique os riscos de impermanent loss antes de fornecer liquidez.
 </footer>
@@ -1479,7 +1524,7 @@ async function fetchSolBalance(addr) {
 
 async function renderWalletBanners() {
   const wallets = getWallets();
-  const targetIds = ['walletBanner', 'walletBannerAirdrop'];
+  const targetIds = ['walletBanner', 'walletBannerAirdrop', 'walletBannerMain'];
 
   targetIds.forEach(id => {
     const el = document.getElementById(id);
@@ -1792,13 +1837,26 @@ async function openLiveLoanSearch() {
 // ══════════════════════════════════════════════════════════
 function showTab(tab) {
   // Esconde todas as abas
-  ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl','tabStrat'].forEach(id => {
+  ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl','tabStrat','tabWallet'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  // Restore global CTA + footer visibility (strat tab hides them)
+  const _gc = document.getElementById('global-cta');
+  if (_gc) _gc.style.display = '';
+  const _gf = document.getElementById('global-footer');
+  if (_gf) _gf.style.display = '';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
 
-  if (tab === 'yield') {
+  if (tab === 'wallet') {
+    const el = document.getElementById('tabWallet');
+    if (el) { el.style.display = ''; el.classList.add('tab-section'); }
+    const btn = document.getElementById('tab-wallet');
+    if (btn) btn.classList.add('active');
+    const tw = document.getElementById('topToggleWrap');
+    if (tw) tw.style.display = 'none';
+    if (typeof renderWalletBanners === 'function') renderWalletBanners();
+  } else if (tab === 'yield') {
     const el = document.getElementById('tabYield');
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
     const btn = document.getElementById('tab-yield');
@@ -1825,6 +1883,7 @@ function showTab(tab) {
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = 'none';
     if (typeof renderLoans === 'function') renderLoans();
+    if (typeof renderLiveRates === 'function') renderLiveRates();
   } else if (tab === 'airdrops') {
     const el = document.getElementById('tabAirdrops');
     if (el) { el.style.display = ''; el.classList.add('tab-section'); }
@@ -1849,6 +1908,10 @@ function showTab(tab) {
     if (btn) btn.classList.add('active');
     const tw = document.getElementById('topToggleWrap');
     if (tw) tw.style.display = 'none';
+    const gc = document.getElementById('global-cta');
+    if (gc) gc.style.display = 'none';
+    const gf = document.getElementById('global-footer');
+    if (gf) gf.style.display = 'none';
     if (typeof renderStratResults === 'function') renderStratResults();
   }
 
@@ -4572,6 +4635,50 @@ function hfCardClass(hf) {
   return {safe:'hf-safe', mod:'hf-mod', warn:'hf-warn', crit:'hf-crit'}[c];
 }
 
+async function renderLiveRates() {
+  const grid = document.getElementById('loanRatesGrid');
+  if (!grid) return;
+  // Fetch supply/borrow rates from DefiLlama for major protocols
+  const PROTOCOLS = [
+    { name:'Aave v3', slug:'aave-v3', asset:'USDC', color:'#b6509e' },
+    { name:'Aave v3', slug:'aave-v3', asset:'ETH',  color:'#627eea' },
+    { name:'Morpho',  slug:'morpho',  asset:'USDC', color:'#9b5de5' },
+    { name:'Kamino',  slug:'kamino-lend', asset:'USDC', color:'#f72585' },
+    { name:'Hyperlend', slug:'hyperlend', asset:'USDC', color:'var(--hype)' },
+    { name:'Compound', slug:'compound-v3', asset:'USDC', color:'#00d395' },
+  ];
+  try {
+    const r = await fetch('https://yields.llama.fi/pools');
+    const data = await r.json();
+    const pools = data.data || [];
+    const results = PROTOCOLS.map(p => {
+      const match = pools.find(x =>
+        x.project && x.project.toLowerCase().includes(p.slug.toLowerCase()) &&
+        x.symbol && x.symbol.toUpperCase().includes(p.asset.toUpperCase()) &&
+        x.apy != null
+      );
+      return { ...p, apy: match ? match.apy : null, tvl: match ? match.tvlUsd : null };
+    }).filter(x => x.apy !== null);
+
+    if (!results.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:.75rem;padding:.5rem">Nenhuma taxa disponível no momento.</div>';
+      return;
+    }
+
+    grid.innerHTML = results.map(p => `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;text-align:center;transition:border-color .2s" onmouseenter="this.style.borderColor='${p.color}'" onmouseleave="this.style.borderColor='var(--border)'">
+        <div style="font-size:.6rem;color:var(--muted);margin-bottom:.15rem">${p.name}</div>
+        <div style="font-size:.68rem;color:var(--muted);margin-bottom:.25rem">${p.asset}</div>
+        <div style="font-size:1rem;font-weight:700;color:${p.color}">${p.apy.toFixed(2)}%</div>
+        <div style="font-size:.58rem;color:var(--muted);margin-top:.15rem">APY supply</div>
+        ${p.tvl ? `<div style="font-size:.58rem;color:var(--muted)">${p.tvl >= 1e9 ? '$' + (p.tvl/1e9).toFixed(1) + 'B' : '$' + (p.tvl/1e6).toFixed(0) + 'M'} TVL</div>` : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:.72rem;padding:.5rem">Taxas indisponíveis (API offline)</div>';
+  }
+}
+
 function renderLoans() {
   const loans = getLoans();
   const el = document.getElementById('loansSection');
@@ -6423,7 +6530,7 @@ function updateHLSummary() {
     { label:'Ativos listados', val: _hlFundingData.length, color:'var(--cyan)' },
     { label:'Funding positivo', val: posRates + ' ativos', color:'var(--green)' },
     { label:'Funding negativo', val: negRates + ' ativos', color:'var(--red)' },
-    { label:'Maior APY', val: (maxFR?.frApy >= 0 ? '+' : '') + (maxFR?.frApy || 0).toFixed(1) + '%', color:'var(--hype)', sub: maxFR?.name },
+    { label:'Funding Extremo', val: (maxFR?.frApy >= 0 ? '+' : '') + (maxFR?.frApy || 0).toFixed(1) + '%', color: (maxFR?.frApy >= 0 ? 'var(--green)' : 'var(--red)'), sub: (maxFR?.name || '') + (maxFR?.frApy < 0 ? ' (longs ganham)' : ' (shorts ganham)') },
     { label:'Open Interest total', val: fmtB(totalOI), color:'var(--text)' },
     { label:'Volume 24h total', val: fmtB(totalVol), color:'var(--text)' },
   ].map(c =>
@@ -6681,6 +6788,10 @@ const COIN_ICON_OVERRIDE = {
   'PENDLE':'https://coin-images.coingecko.com/coins/images/15069/small/Pendle_Logo_Normal-03.png',
   'WIF':   'https://coin-images.coingecko.com/coins/images/33566/small/dogwifhat.jpg',
   'PYTH':  'https://coin-images.coingecko.com/coins/images/31069/small/pyth.png',
+  'PYUSD': 'https://coin-images.coingecko.com/coins/images/31212/small/PYUSD.png',
+  'STRK':  'https://coin-images.coingecko.com/coins/images/26433/small/starknet.png',
+  'SAFE':  'https://coin-images.coingecko.com/coins/images/25702/small/safe.png',
+  'GHO':   'https://coin-images.coingecko.com/coins/images/30663/small/gho-token-logo.png',
 };
 
 // Gera HTML do ícone — override → CDN → fallback iniciais coloridas
@@ -6896,4 +7007,5 @@ setInterval(() => {
   if (window._hlLoaded) refreshHLAll();
 }, 5 * 60 * 1000);
 </script>
+<div id="walletBanner" style="display:none"></div>
 </body>
