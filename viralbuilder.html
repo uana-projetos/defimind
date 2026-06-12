@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#0a0b0f"/>
+  <meta name="description" content="ViralBuilder — Seu agente de IA para dominar o TikTok Shop"/>
+  <title>ViralBuilder ⚡ TikTok Shop com IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0b0f; color: #f0f2f8; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #141520; }
+    ::-webkit-scrollbar-thumb { background: #252840; border-radius: 4px; }
+    textarea, input, select { outline: none; font-family: inherit; }
+    button { cursor: pointer; font-family: inherit; }
+    .spin { animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade { animation: fadeIn 0.3s ease both; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .pulse { animation: pulse 1.5s ease infinite; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useRef } = React;
+
+// ── Paleta ───────────────────────────────────────────────────────────────────
+const C = {
+  bg:"#0a0b0f", card:"#141520", card2:"#1a1d2e", card3:"#1f2235",
+  accent:"#ff2d55", cyan:"#00f2ea", gold:"#ffd700",
+  green:"#22c55e", purple:"#a855f7", orange:"#f97316",
+  text:"#f0f2f8", muted:"#8892a4", border:"#252840"
+};
+
+// ── Prompt base ───────────────────────────────────────────────────────────────
+const SYS = `Você é um especialista em TikTok Shop e marketing viral com anos de experiência.
+Domina hooks de 3 segundos, psicologia de conversão, ângulos virais e GMV.
+Responde sempre em português brasileiro. Tom: direto, prático, coloquial, sem enrolação.
+Conhece os padrões que fazem vídeos explodirem: prova social, urgência, transformação, curiosidade, autoridade.`;
+
+// ── Utilitários ───────────────────────────────────────────────────────────────
+const copy = t => navigator.clipboard?.writeText(t).catch(() => {});
+const tryParseJSON = (text, fallback = null) => {
+  try {
+    const c = text.replace(/```json|```/g, "").trim();
+    const s = c.indexOf("[") !== -1 && (c.indexOf("[") < c.indexOf("{") || c.indexOf("{") === -1) ? "[" : "{";
+    const e = s === "[" ? "]" : "}";
+    return JSON.parse(c.slice(c.indexOf(s), c.lastIndexOf(e) + 1));
+  } catch { return fallback; }
+};
+
+// ── Componentes base ─────────────────────────────────────────────────────────
+const Btn = ({ onClick, disabled, loading: ld, children, style={}, variant="primary" }) => {
+  const variants = {
+    primary:{ background:`linear-gradient(135deg,${C.accent},#ff6b85)`, color:"#fff" },
+    cyan:{ background:`linear-gradient(135deg,${C.cyan},#00c4be)`, color:"#000" },
+    ghost:{ background:C.card3, color:C.text, border:`1px solid ${C.border}` },
+    gold:{ background:`linear-gradient(135deg,${C.gold},#ffb700)`, color:"#000" },
+    purple:{ background:`linear-gradient(135deg,${C.purple},#7c3aed)`, color:"#fff" },
+  };
+  return (
+    <button onClick={disabled||ld?undefined:onClick}
+      style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+        padding:"11px 16px",borderRadius:10,border:"none",fontWeight:700,fontSize:14,
+        width:"100%",opacity:disabled||ld?0.55:1,cursor:disabled||ld?"not-allowed":"pointer",
+        transition:"all 0.15s",...variants[variant],...style }}>
+      {ld ? <span className="spin">⟳</span> : children}
+    </button>
+  );
+};
+
+const Card = ({ children, style={}, onClick }) => (
+  <div onClick={onClick} style={{ background:C.card,borderRadius:12,padding:16,
+    border:`1px solid ${C.border}`,cursor:onClick?"pointer":"default",...style }}>
+    {children}
+  </div>
+);
+
+const Inp = ({ label, value, onChange, placeholder, multi, rows=3, type="text" }) => (
+  <div style={{ marginBottom:12 }}>
+    {label && <div style={{ fontSize:12,color:C.muted,marginBottom:5,fontWeight:500 }}>{label}</div>}
+    {multi
+      ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
+          style={{ width:"100%",background:C.card2,border:`1px solid ${C.border}`,borderRadius:8,
+            padding:"10px 12px",color:C.text,fontSize:14,resize:"vertical",lineHeight:1.6 }}/>
+      : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+          style={{ width:"100%",background:C.card2,border:`1px solid ${C.border}`,borderRadius:8,
+            padding:"10px 12px",color:C.text,fontSize:14 }}/>
+    }
+  </div>
+);
+
+const Tag = ({ children, color=C.accent }) => (
+  <span style={{ background:color+"22",color,fontSize:11,fontWeight:600,
+    padding:"3px 8px",borderRadius:20,border:`1px solid ${color}44`,whiteSpace:"nowrap" }}>
+    {children}
+  </span>
+);
+
+const ScoreBar = ({ label, value, color=C.accent, feedback }) => (
+  <div style={{ marginBottom:12 }}>
+    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
+      <span style={{ fontSize:13 }}>{label}</span>
+      <span style={{ fontWeight:700,color,fontSize:13 }}>{value}/10</span>
+    </div>
+    <div style={{ background:C.card3,borderRadius:4,height:7 }}>
+      <div style={{ background:color,height:7,borderRadius:4,width:`${Math.min(value*10,100)}%`,transition:"width 0.6s ease" }}/>
+    </div>
+    {feedback && <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>{feedback}</div>}
+  </div>
+);
+
+const CopyBtn = ({ text, style={} }) => {
+  const [ok, setOk] = useState(false);
+  const doCopy = () => { copy(text); setOk(true); setTimeout(()=>setOk(false),1500); };
+  return (
+    <button onClick={doCopy} style={{ background:"none",border:`1px solid ${C.border}`,color:ok?C.green:C.muted,
+      borderRadius:8,padding:"6px 12px",fontSize:12,width:"100%",fontWeight:ok?600:400,...style }}>
+      {ok ? "✓ Copiado!" : "📋 Copiar"}
+    </button>
+  );
+};
+
+// ── useClaude hook ────────────────────────────────────────────────────────────
+const useClaude = (claudeKey, setErr) => useCallback(async (prompt, sys=SYS, maxTokens=1500, useSearch=false) => {
+  if (!claudeKey) { setErr("⚙️ Configure sua API Key Claude nas Configurações"); return null; }
+  try {
+    const body = { model:"claude-sonnet-4-6", max_tokens:maxTokens, system:sys,
+      messages:[{role:"user",content:prompt}] };
+    if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json","x-api-key":claudeKey,
+        "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+      body:JSON.stringify(body)
+    });
+    if (!res.ok) { const e=await res.json(); setErr(e.error?.message||"Erro API Claude"); return null; }
+    const data = await res.json();
+    return data.content?.filter(b=>b.type==="text").map(b=>b.text).join("\n")||"";
+  } catch(e) { setErr("Erro de conexão: "+e.message); return null; }
+}, [claudeKey, setErr]);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════════════════════════════════════
+const Home = ({ setPage, hasKey }) => {
+  const features = [
+    { id:"finder", icon:"🔥", title:"Viral Finder", desc:"Descobre os vídeos explodindo no TikTok Shop agora", color:C.accent },
+    { id:"decoder", icon:"🔓", title:"Hook Decoder", desc:"Decifra por que um hook viraliza e gera variações", color:C.cyan },
+    { id:"studio", icon:"✍️", title:"Script Studio", desc:"Roteiros completos prontos para gravar e converter", color:C.purple },
+    { id:"multi", icon:"🎯", title:"Multi-Ângulo", desc:"5 ângulos diferentes do mesmo produto em segundos", color:C.orange },
+    { id:"score", icon:"📊", title:"Score Viral", desc:"Prevê o potencial viral antes de postar", color:C.gold },
+    { id:"cal", icon:"📅", title:"Calendário", desc:"Plano 7/14/30 dias para dominar sua categoria", color:C.green },
+  ];
+  return (
+    <div className="fade">
+      {!hasKey && (
+        <div onClick={()=>setPage("config")} style={{ background:"#1a0f00",border:`1px solid ${C.gold}55`,
+          borderRadius:10,padding:12,marginBottom:16,cursor:"pointer",display:"flex",gap:10,alignItems:"center" }}>
+          <span style={{ fontSize:22 }}>🔑</span>
+          <div>
+            <div style={{ fontSize:13,fontWeight:700,color:C.gold }}>Configure sua API Key</div>
+            <div style={{ fontSize:12,color:C.muted }}>Toque aqui para adicionar sua chave Claude</div>
+          </div>
+          <span style={{ marginLeft:"auto",color:C.muted,fontSize:18 }}>›</span>
+        </div>
+      )}
+      <div style={{ textAlign:"center",marginBottom:28,paddingTop:8 }}>
+        <div style={{ fontSize:44,marginBottom:10 }}>⚡</div>
+        <h1 style={{ fontSize:26,fontWeight:900,
+          background:`linear-gradient(90deg,${C.accent},${C.cyan})`,
+          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8 }}>
+          ViralBuilder
+        </h1>
+        <p style={{ color:C.muted,fontSize:14 }}>Seu agente de IA para dominar o TikTok Shop</p>
+      </div>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+        {features.map(f=>(
+          <Card key={f.id} onClick={()=>setPage(f.id)}
+            style={{ transition:"border-color 0.15s",':hover':{borderColor:f.color} }}>
+            <div style={{ fontSize:26,marginBottom:8 }}>{f.icon}</div>
+            <div style={{ fontWeight:700,fontSize:14,color:f.color,marginBottom:4 }}>{f.title}</div>
+            <div style={{ fontSize:12,color:C.muted,lineHeight:1.5 }}>{f.desc}</div>
+          </Card>
+        ))}
+      </div>
+      <div style={{ marginTop:20,background:C.card,borderRadius:10,padding:14,
+        border:`1px solid ${C.border}`,fontSize:12,color:C.muted,textAlign:"center",lineHeight:1.7 }}>
+        Powered by Claude AI · ElevenLabs · Dados salvos localmente
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VIRAL FINDER
+// ══════════════════════════════════════════════════════════════════════════════
+const ViralFinder = ({ callClaude, setErr }) => {
+  const [produto, setProduto] = useState("");
+  const [nicho, setNicho] = useState("geral");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const nichos = [
+    {id:"geral",label:"🎯 Geral"},{id:"beleza",label:"💄 Beleza"},
+    {id:"moda",label:"👗 Moda"},{id:"saude",label:"💪 Saúde"},
+    {id:"casa",label:"🏠 Casa"},{id:"pet",label:"🐾 Pet"},
+    {id:"tech",label:"📱 Tech"},{id:"food",label:"🍕 Food"},
+  ];
+
+  const buscar = async () => {
+    if (!produto.trim()) { setErr("Digite o produto ou nicho"); return; }
+    setLoading(true); setResults([]);
+    const prompt = `Pesquise na internet os vídeos mais virais do TikTok Shop sobre "${produto}" no nicho "${nicho}" em 2025/2026.
+
+Para cada vídeo, retorne APENAS um JSON válido (array):
+[
+  {
+    "titulo": "descrição do vídeo",
+    "criador": "tipo do creator (ex: nano-influencer, everyday user, expert)",
+    "hook": "os primeiros 3 segundos exatos — o texto falado",
+    "angulo": "ângulo principal (Transformação|Prova Social|Dor|Curiosidade|Autoridade|Urgência)",
+    "porque_viral": "1 frase explicando o que fez explodir",
+    "gmv_potencial": "alto|médio|baixo",
+    "insights": "1 insight prático e replicável"
+  }
+]
+
+Retorne APENAS o array JSON, sem markdown, sem texto fora.`;
+    const res = await callClaude(prompt, SYS, 2000, true);
+    if (res) {
+      const parsed = tryParseJSON(res, []);
+      if (parsed?.length) setResults(parsed);
+      else setErr("Sem resultados. Tente um produto diferente.");
+    }
+    setLoading(false);
+  };
+
+  const gmvC = { alto:C.green, médio:C.gold, baixo:C.muted };
+  const angC = { Transformação:C.purple,"Prova Social":C.cyan,Dor:C.accent,Curiosidade:C.orange,Autoridade:C.gold,Urgência:C.accent };
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>🔥 Viral Finder</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Descobre vídeos explodindo agora no TikTok Shop</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Produto ou palavra-chave" value={produto} onChange={setProduto}
+          placeholder="Ex: sérum vitamina C, tênis de corrida, legging..."/>
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12,color:C.muted,marginBottom:7,fontWeight:500 }}>Nicho</div>
+          <div style={{ display:"flex",flexWrap:"wrap",gap:7 }}>
+            {nichos.map(n=>(
+              <button key={n.id} onClick={()=>setNicho(n.id)} style={{ padding:"6px 11px",borderRadius:20,
+                border:`1px solid ${nicho===n.id?C.accent:C.border}`,
+                background:nicho===n.id?C.accent+"22":C.card2,
+                color:nicho===n.id?C.accent:C.muted,fontSize:12,fontWeight:nicho===n.id?600:400 }}>
+                {n.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Btn onClick={buscar} loading={loading}>🔍 Buscar Virais</Btn>
+      </Card>
+      {results.map((v,i)=>(
+        <Card key={i} style={{ marginBottom:12 }} className="fade">
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10 }}>
+            <div style={{ flex:1,paddingRight:8 }}>
+              <div style={{ fontWeight:600,fontSize:14,marginBottom:3 }}>{v.titulo}</div>
+              <div style={{ fontSize:12,color:C.muted }}>{v.criador}</div>
+            </div>
+            <Tag color={gmvC[v.gmv_potencial]||C.muted}>GMV {v.gmv_potencial}</Tag>
+          </div>
+          <div style={{ background:C.card2,borderRadius:8,padding:10,marginBottom:10,borderLeft:`3px solid ${C.accent}` }}>
+            <div style={{ fontSize:11,color:C.accent,fontWeight:700,marginBottom:4 }}>🎣 HOOK (0–3s)</div>
+            <div style={{ fontSize:13,fontWeight:600,lineHeight:1.5 }}>"{v.hook}"</div>
+          </div>
+          <div style={{ display:"flex",gap:7,marginBottom:10,flexWrap:"wrap" }}>
+            <Tag color={angC[v.angulo]||C.purple}>{v.angulo}</Tag>
+          </div>
+          <div style={{ fontSize:13,color:C.text,marginBottom:10,lineHeight:1.6 }}>
+            <span style={{ color:C.cyan,fontWeight:600 }}>Por que viralizou: </span>{v.porque_viral}
+          </div>
+          <div style={{ background:C.card3,borderRadius:8,padding:10,fontSize:12,lineHeight:1.5,borderLeft:`3px solid ${C.green}` }}>
+            <span style={{ color:C.green,fontWeight:600 }}>💡 Insight: </span>{v.insights}
+          </div>
+          <div style={{ marginTop:10 }}>
+            <CopyBtn text={`Hook: ${v.hook}\n\nÂngulo: ${v.angulo}\nPor que viralizou: ${v.porque_viral}\n\nInsight: ${v.insights}`}/>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOOK DECODER
+// ══════════════════════════════════════════════════════════════════════════════
+const HookDecoder = ({ callClaude, setErr }) => {
+  const [hook, setHook] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const decodificar = async () => {
+    if (!hook.trim()) { setErr("Cole o hook para analisar"); return; }
+    setLoading(true); setResult(null);
+    const prompt = `Analise este hook de TikTok e retorne APENAS JSON:
+
+Hook: "${hook}"
+
+{
+  "tipo": "tipo do hook (Identidade|Curiosidade|Contrarian|Open Loop|Confissão|Transformação|Urgência|Prova Social)",
+  "gatilho": "gatilho psicológico principal",
+  "porque_funciona": "análise em 2 frases do que faz funcionar",
+  "pontos_fortes": ["ponto 1", "ponto 2"],
+  "pontos_fracos": ["fraqueza se houver, senão array vazio"],
+  "score": número de 1 a 10,
+  "variacoes": [
+    {"texto": "variação 1 melhorada", "melhoria": "o que mudou"},
+    {"texto": "variação 2 ângulo diferente", "melhoria": "o que mudou"},
+    {"texto": "variação 3 mais agressiva", "melhoria": "o que mudou"}
+  ]
+}
+
+Apenas o JSON.`;
+    const res = await callClaude(prompt, SYS, 1500);
+    if (res) {
+      const parsed = tryParseJSON(res);
+      if (parsed) setResult(parsed);
+      else setErr("Erro ao processar. Tente novamente.");
+    }
+    setLoading(false);
+  };
+
+  const sColor = s => s>=8?C.green:s>=6?C.gold:C.accent;
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>🔓 Hook Decoder</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Decifra o que faz um hook explodir no TikTok</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Cole o hook aqui" value={hook} onChange={setHook}
+          placeholder="Ex: 'Esse produto destruiu minha pele antes de salvar ela...'" multi rows={3}/>
+        <Btn onClick={decodificar} loading={loading} variant="cyan">🔍 Decodificar</Btn>
+      </Card>
+      {result && (
+        <div className="fade">
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
+                <Tag color={C.purple}>{result.tipo}</Tag>
+                <Tag color={C.cyan}>{result.gatilho}</Tag>
+              </div>
+              <div style={{ textAlign:"center",minWidth:50 }}>
+                <div style={{ fontSize:30,fontWeight:900,color:sColor(result.score),lineHeight:1 }}>{result.score}</div>
+                <div style={{ fontSize:10,color:C.muted }}>/ 10</div>
+              </div>
+            </div>
+            <div style={{ fontSize:13,lineHeight:1.6,marginBottom:12 }}>{result.porque_funciona}</div>
+            {result.pontos_fortes?.map((p,i)=>(
+              <div key={i} style={{ display:"flex",gap:8,fontSize:13,marginBottom:5 }}>
+                <span style={{ color:C.green }}>✓</span><span>{p}</span>
+              </div>
+            ))}
+            {result.pontos_fracos?.filter(Boolean).map((p,i)=>(
+              <div key={i} style={{ display:"flex",gap:8,fontSize:13,marginBottom:5,marginTop:4 }}>
+                <span style={{ color:C.accent }}>⚠</span><span style={{ color:C.muted }}>{p}</span>
+              </div>
+            ))}
+          </Card>
+          <div style={{ fontSize:12,fontWeight:700,color:C.muted,marginBottom:8,
+            textTransform:"uppercase",letterSpacing:1 }}>3 Variações Melhoradas</div>
+          {result.variacoes?.map((v,i)=>(
+            <Card key={i} style={{ marginBottom:10 }}>
+              <div style={{ fontSize:11,color:C.cyan,fontWeight:600,marginBottom:6 }}>
+                Variação {i+1} · {v.melhoria}
+              </div>
+              <div style={{ fontSize:14,fontWeight:600,lineHeight:1.5,marginBottom:10 }}>"{v.texto}"</div>
+              <CopyBtn text={v.texto}/>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SCRIPT STUDIO
+// ══════════════════════════════════════════════════════════════════════════════
+const ScriptStudio = ({ callClaude, elKey, setErr }) => {
+  const [produto, setProduto] = useState("");
+  const [angulo, setAngulo] = useState("transformacao");
+  const [duracao, setDuracao] = useState("30");
+  const [script, setScript] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [voz, setVoz] = useState("EXAVITQu4vr4xnSDxMaL");
+
+  const angulos = [
+    {id:"transformacao",label:"✨ Transformação",desc:"Antes/depois, resultado visível"},
+    {id:"dor",label:"😣 Dor",desc:"Problema que o produto resolve"},
+    {id:"prova_social",label:"👥 Prova Social",desc:"X pessoas usam, avaliações reais"},
+    {id:"curiosidade",label:"🤔 Curiosidade",desc:"Segredo, descoberta, revelação"},
+    {id:"autoridade",label:"🏆 Autoridade",desc:"Expert, especialista, ciência"},
+    {id:"urgencia",label:"⏰ Urgência",desc:"Estoque limitado, oferta por tempo"},
+  ];
+
+  const gerar = async () => {
+    if (!produto.trim()) { setErr("Digite o produto"); return; }
+    setLoading(true); setScript(""); setAudioUrl(null);
+    const aLabel = angulos.find(a=>a.id===angulo)?.label||angulo;
+    const devSec = duracao==="15"?"12":duracao==="30"?"22":"45";
+    const prompt = `Crie roteiro completo para TikTok Shop de ${duracao}s para: "${produto}"
+Ângulo: ${aLabel}
+
+Estrutura obrigatória:
+
+[HOOK — 0 a 3s]
+(texto exato a falar, impactante, para parar o scroll)
+
+[DESENVOLVIMENTO — 3 a ${devSec}s]
+(construindo desejo, mostrando resultado/solução)
+
+[CTA — últimos segundos]
+(chamada direta para ação no TikTok Shop)
+
+---
+📌 NOTAS DE PRODUÇÃO
+Tom de voz: ...
+Expressão/energia: ...
+Texto na tela (overlay): ...
+Tipo de música de fundo: ...
+
+Seja coloquial, como alguém real que usa e recomenda. Zero corporativismo.`;
+    const res = await callClaude(prompt, SYS, 1200);
+    if (res) setScript(res);
+    setLoading(false);
+  };
+
+  const gerarVoz = async () => {
+    if (!elKey) { setErr("Configure sua API Key ElevenLabs nas ⚙️ Config"); return; }
+    setLoadingAudio(true);
+    try {
+      const texto = script.replace(/\[.*?\]/g,"").replace(/---[\s\S]*/,"").trim().slice(0,2500);
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voz}`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","xi-api-key":elKey},
+        body:JSON.stringify({text:texto,model_id:"eleven_multilingual_v2",
+          voice_settings:{stability:0.5,similarity_boost:0.85}})
+      });
+      if (!res.ok) setErr("Erro ElevenLabs. Verifique sua API Key.");
+      else { const blob=await res.blob(); setAudioUrl(URL.createObjectURL(blob)); }
+    } catch { setErr("Erro ao gerar áudio."); }
+    setLoadingAudio(false);
+  };
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>✍️ Script Studio</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Roteiro completo pronto para gravar e converter</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Produto" value={produto} onChange={setProduto}
+          placeholder="Ex: creme anti-idade, whey chocolate, massageador..."/>
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12,color:C.muted,marginBottom:7,fontWeight:500 }}>Duração</div>
+          <div style={{ display:"flex",gap:8 }}>
+            {["15","30","60"].map(d=>(
+              <button key={d} onClick={()=>setDuracao(d)} style={{ flex:1,padding:"9px",borderRadius:8,
+                border:`1px solid ${duracao===d?C.accent:C.border}`,
+                background:duracao===d?C.accent+"22":C.card2,
+                color:duracao===d?C.accent:C.muted,fontWeight:700,fontSize:15 }}>
+                {d}s
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12,color:C.muted,marginBottom:7,fontWeight:500 }}>Ângulo</div>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+            {angulos.map(a=>(
+              <button key={a.id} onClick={()=>setAngulo(a.id)} style={{ padding:"9px 10px",borderRadius:8,textAlign:"left",
+                border:`1px solid ${angulo===a.id?C.purple:C.border}`,
+                background:angulo===a.id?C.purple+"22":C.card2,
+                color:angulo===a.id?C.purple:C.muted,fontSize:12,fontWeight:angulo===a.id?700:400 }}>
+                <div>{a.label}</div>
+                <div style={{ fontSize:10,color:C.muted,marginTop:2 }}>{a.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <Btn onClick={gerar} loading={loading}>⚡ Gerar Roteiro</Btn>
+      </Card>
+      {script && (
+        <div className="fade">
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+              <div style={{ fontWeight:700,fontSize:14 }}>Roteiro</div>
+              <button onClick={()=>copy(script)} style={{ background:"none",border:"none",color:C.cyan,fontSize:12,fontWeight:600 }}>📋 Copiar</button>
+            </div>
+            <pre style={{ whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.75,color:C.text,fontFamily:"inherit" }}>{script}</pre>
+          </Card>
+          <Card>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:12 }}>🎙 Gerar Áudio (ElevenLabs)</div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12,color:C.muted,marginBottom:6 }}>Voz</div>
+              <select value={voz} onChange={e=>setVoz(e.target.value)} style={{ width:"100%",background:C.card2,
+                border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:14 }}>
+                <option value="EXAVITQu4vr4xnSDxMaL">Sarah (Feminino)</option>
+                <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Masculino)</option>
+                <option value="pFZP5JQG7iQjIQuC4Bku">Lily (Feminino jovem)</option>
+                <option value="N2lVS1w4EtoT3dr4eOWO">Callum (Masculino)</option>
+              </select>
+            </div>
+            <Btn onClick={gerarVoz} loading={loadingAudio} variant="ghost">🎙 Gerar Narração</Btn>
+            {audioUrl && (
+              <div style={{ marginTop:12 }}>
+                <audio controls src={audioUrl} style={{ width:"100%",borderRadius:8 }}/>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MULTI-ÂNGULO
+// ══════════════════════════════════════════════════════════════════════════════
+const MultiAngulo = ({ callClaude, setErr }) => {
+  const [produto, setProduto] = useState("");
+  const [angulos, setAngulos] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const gerar = async () => {
+    if (!produto.trim()) { setErr("Digite o produto"); return; }
+    setLoading(true); setAngulos([]);
+    const prompt = `Crie 5 ângulos virais para TikTok Shop sobre: "${produto}"
+
+Retorne APENAS JSON (array com exatamente 5):
+[
+  {
+    "angulo": "Transformação",
+    "emoji": "✨",
+    "hook": "hook de 3 segundos exato",
+    "mini_script": "roteiro em 3 frases diretas",
+    "publico": "quem é o público alvo",
+    "potencial": "alto|médio"
+  }
+]
+
+Os 5 ângulos obrigatórios: Transformação, Dor, Prova Social, Curiosidade, Autoridade.
+Apenas o JSON.`;
+    const res = await callClaude(prompt, SYS, 2000);
+    if (res) {
+      const parsed = tryParseJSON(res, []);
+      if (parsed?.length) setAngulos(parsed);
+      else setErr("Erro ao processar. Tente novamente.");
+    }
+    setLoading(false);
+  };
+
+  const colors = [C.accent, C.cyan, C.purple, C.orange, C.green];
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>🎯 Multi-Ângulo</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>5 ângulos virais do mesmo produto em segundos</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Produto" value={produto} onChange={setProduto}
+          placeholder="Ex: massageador elétrico, legging fitness, protetor solar..."/>
+        <Btn onClick={gerar} loading={loading} variant="gold">🎯 Gerar 5 Ângulos</Btn>
+      </Card>
+      {angulos.map((a,i)=>(
+        <Card key={i} style={{ marginBottom:12,borderLeft:`3px solid ${colors[i]}` }}>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+            <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+              <span style={{ fontSize:22 }}>{a.emoji}</span>
+              <span style={{ fontWeight:800,color:colors[i],fontSize:15 }}>{a.angulo}</span>
+            </div>
+            <Tag color={a.potencial==="alto"?C.green:C.gold}>{a.potencial}</Tag>
+          </div>
+          <div style={{ background:C.card2,borderRadius:8,padding:10,marginBottom:10,borderLeft:`2px solid ${colors[i]}` }}>
+            <div style={{ fontSize:11,color:colors[i],fontWeight:700,marginBottom:4 }}>🎣 HOOK</div>
+            <div style={{ fontSize:13,fontWeight:700,lineHeight:1.5 }}>"{a.hook}"</div>
+          </div>
+          <div style={{ fontSize:13,lineHeight:1.7,marginBottom:8 }}>{a.mini_script}</div>
+          <div style={{ fontSize:12,color:C.muted,marginBottom:10 }}>👤 {a.publico}</div>
+          <CopyBtn text={`[${a.angulo}]\n\nHook: ${a.hook}\n\n${a.mini_script}`}/>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SCORE VIRAL
+// ══════════════════════════════════════════════════════════════════════════════
+const ScoreViral = ({ callClaude, setErr }) => {
+  const [texto, setTexto] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const analisar = async () => {
+    if (!texto.trim()) { setErr("Cole seu hook ou script"); return; }
+    setLoading(true); setResult(null);
+    const prompt = `Analise o potencial viral deste conteúdo TikTok Shop e retorne APENAS JSON:
+
+"${texto}"
+
+{
+  "score_geral": número 0-100,
+  "nivel": "🔥 Explosivo|⚡ Alto|📈 Médio|⚠️ Fraco",
+  "veredicto": "diagnóstico direto em 1 frase",
+  "dimensoes": {
+    "hook": { "score": 0-10, "feedback": "análise curta" },
+    "retencao": { "score": 0-10, "feedback": "análise curta" },
+    "cta": { "score": 0-10, "feedback": "análise curta" },
+    "emocao": { "score": 0-10, "feedback": "análise curta" },
+    "clareza": { "score": 0-10, "feedback": "análise curta" }
+  },
+  "melhorias": ["melhoria 1", "melhoria 2", "melhoria 3"],
+  "versao_melhorada": "versão reescrita mais viral"
+}
+
+Apenas o JSON.`;
+    const res = await callClaude(prompt, SYS, 1500);
+    if (res) {
+      const parsed = tryParseJSON(res);
+      if (parsed) setResult(parsed);
+      else setErr("Erro ao processar. Tente novamente.");
+    }
+    setLoading(false);
+  };
+
+  const sColor = s => s>=75?C.green:s>=50?C.gold:s>=30?C.orange:C.accent;
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>📊 Score Viral</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Prevê o potencial viral antes de você postar</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Cole seu hook ou script" value={texto} onChange={setTexto}
+          placeholder="Cole aqui o texto do seu vídeo para análise..." multi rows={4}/>
+        <Btn onClick={analisar} loading={loading} variant="gold">📊 Analisar Viral Score</Btn>
+      </Card>
+      {result && (
+        <div className="fade">
+          <Card style={{ marginBottom:12,textAlign:"center",padding:24 }}>
+            <div style={{ fontSize:64,fontWeight:900,color:sColor(result.score_geral),lineHeight:1 }}>
+              {result.score_geral}
+            </div>
+            <div style={{ fontSize:20,fontWeight:700,marginTop:6 }}>{result.nivel}</div>
+            <div style={{ fontSize:13,color:C.muted,marginTop:8,lineHeight:1.5 }}>{result.veredicto}</div>
+          </Card>
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ fontWeight:700,marginBottom:14 }}>Análise por Dimensão</div>
+            {Object.entries(result.dimensoes||{}).map(([k,v])=>(
+              <ScoreBar key={k} label={k.charAt(0).toUpperCase()+k.slice(1)}
+                value={v.score} color={sColor(v.score*10)} feedback={v.feedback}/>
+            ))}
+          </Card>
+          {result.melhorias?.length>0 && (
+            <Card style={{ marginBottom:12 }}>
+              <div style={{ fontWeight:700,marginBottom:10 }}>🛠 O que melhorar</div>
+              {result.melhorias.map((m,i)=>(
+                <div key={i} style={{ display:"flex",gap:9,fontSize:13,marginBottom:9 }}>
+                  <span style={{ color:C.accent,fontWeight:700,minWidth:18 }}>{i+1}.</span>
+                  <span style={{ lineHeight:1.5 }}>{m}</span>
+                </div>
+              ))}
+            </Card>
+          )}
+          {result.versao_melhorada && (
+            <Card>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
+                <div style={{ fontWeight:700 }}>✨ Versão Melhorada</div>
+                <button onClick={()=>copy(result.versao_melhorada)} style={{ background:"none",border:"none",color:C.cyan,fontSize:12,fontWeight:600 }}>📋 Copiar</button>
+              </div>
+              <div style={{ background:C.card2,borderRadius:8,padding:12,fontSize:13,lineHeight:1.7,
+                borderLeft:`3px solid ${C.cyan}` }}>
+                {result.versao_melhorada}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CALENDÁRIO
+// ══════════════════════════════════════════════════════════════════════════════
+const Calendario = ({ callClaude, setErr }) => {
+  const [produto, setProduto] = useState("");
+  const [dias, setDias] = useState("7");
+  const [cal, setCal] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const gerar = async () => {
+    if (!produto.trim()) { setErr("Digite o produto ou nicho"); return; }
+    setLoading(true); setCal([]);
+    const prompt = `Crie calendário de conteúdo de ${dias} dias para TikTok Shop sobre: "${produto}"
+
+Retorne APENAS JSON (array com ${dias} objetos):
+[
+  {
+    "dia": 1,
+    "semana": "Segunda",
+    "tema": "tema do dia",
+    "angulo": "ângulo principal",
+    "hook": "hook sugerido",
+    "formato": "Unboxing|Tutorial|Review|Comparação|POV|Reaction|BTS|Trending Audio",
+    "hashtags": ["#tag1","#tag2","#tag3","#tag4"],
+    "dica": "dica de produção rápida (1 frase)"
+  }
+]
+
+Apenas o JSON.`;
+    const res = await callClaude(prompt, SYS, 2500);
+    if (res) {
+      const parsed = tryParseJSON(res, []);
+      if (parsed?.length) setCal(parsed);
+      else setErr("Erro ao processar. Tente novamente.");
+    }
+    setLoading(false);
+  };
+
+  const fmtColor = {Unboxing:C.purple,Tutorial:C.cyan,Review:C.gold,
+    Comparação:C.orange,POV:C.accent,Reaction:C.green,BTS:C.muted,"Trending Audio":C.cyan};
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>📅 Calendário de Conteúdo</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Plano completo para dominar sua categoria no TikTok Shop</p>
+      <Card style={{ marginBottom:12 }}>
+        <Inp label="Produto ou nicho" value={produto} onChange={setProduto}
+          placeholder="Ex: produtos de skincare, moda feminina plus size..."/>
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12,color:C.muted,marginBottom:7,fontWeight:500 }}>Período</div>
+          <div style={{ display:"flex",gap:8 }}>
+            {["7","14","30"].map(d=>(
+              <button key={d} onClick={()=>setDias(d)} style={{ flex:1,padding:"9px",borderRadius:8,
+                border:`1px solid ${dias===d?C.green:C.border}`,
+                background:dias===d?C.green+"22":C.card2,
+                color:dias===d?C.green:C.muted,fontWeight:700 }}>
+                {d} dias
+              </button>
+            ))}
+          </div>
+        </div>
+        <Btn onClick={gerar} loading={loading} variant="cyan">📅 Gerar Calendário</Btn>
+      </Card>
+      {cal.length>0 && (
+        <div className="fade">
+          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:12,alignItems:"center" }}>
+            <div style={{ fontWeight:700 }}>{cal.length} dias planejados</div>
+            <button onClick={()=>copy(cal.map(d=>`Dia ${d.dia} (${d.semana}) — ${d.tema}\nFormato: ${d.formato}\nHook: ${d.hook}\n${d.hashtags?.join(" ")}\n${d.dica}`).join("\n\n"))}
+              style={{ background:"none",border:"none",color:C.cyan,fontSize:12,fontWeight:600 }}>
+              📋 Copiar tudo
+            </button>
+          </div>
+          {cal.map((d,i)=>(
+            <Card key={i} style={{ marginBottom:10 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:10 }}>
+                <div style={{ background:C.accent+"22",color:C.accent,width:36,height:36,borderRadius:8,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,flexShrink:0 }}>
+                  {d.dia}
+                </div>
+                <div>
+                  <div style={{ fontWeight:600,fontSize:13 }}>{d.semana}</div>
+                  <Tag color={fmtColor[d.formato]||C.purple}>{d.formato}</Tag>
+                </div>
+              </div>
+              <div style={{ fontWeight:700,fontSize:14,marginBottom:8 }}>{d.tema}</div>
+              <div style={{ background:C.card2,borderRadius:7,padding:9,fontSize:12,lineHeight:1.5,
+                borderLeft:`2px solid ${C.accent}`,marginBottom:8 }}>
+                🎣 "{d.hook}"
+              </div>
+              <div style={{ fontSize:12,color:C.muted,marginBottom:8 }}>💡 {d.dica}</div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:5 }}>
+                {d.hashtags?.map((h,hi)=>(
+                  <span key={hi} style={{ background:C.card3,color:C.cyan,fontSize:11,padding:"2px 7px",borderRadius:5 }}>{h}</span>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+const Config = ({ claudeKey, setClaudeKey, elKey, setElKey }) => {
+  const [ck, setCk] = useState(claudeKey);
+  const [ek, setEk] = useState(elKey);
+  const [saved, setSaved] = useState(false);
+
+  const salvar = () => {
+    localStorage.setItem("vb_claude", ck);
+    localStorage.setItem("vb_el", ek);
+    setClaudeKey(ck); setElKey(ek);
+    setSaved(true); setTimeout(()=>setSaved(false), 2000);
+  };
+
+  return (
+    <div className="fade">
+      <h2 style={{ fontSize:18,fontWeight:800,marginBottom:3 }}>⚙️ Configurações</h2>
+      <p style={{ color:C.muted,fontSize:13,marginBottom:16 }}>Suas chaves API (salvas apenas no seu device)</p>
+      <Card style={{ marginBottom:12 }}>
+        <div style={{ fontWeight:700,marginBottom:12,display:"flex",gap:8,alignItems:"center" }}>
+          <span style={{ fontSize:20 }}>🤖</span> Claude API — Anthropic
+        </div>
+        <Inp label="API Key" value={ck} onChange={setCk} placeholder="sk-ant-api03-..."/>
+        <div style={{ fontSize:12,color:C.muted,lineHeight:1.6 }}>
+          Obtenha em: <span style={{ color:C.cyan }}>console.anthropic.com</span><br/>
+          Usada para gerar scripts, analisar hooks e buscar virais.
+        </div>
+      </Card>
+      <Card style={{ marginBottom:12 }}>
+        <div style={{ fontWeight:700,marginBottom:12,display:"flex",gap:8,alignItems:"center" }}>
+          <span style={{ fontSize:20 }}>🎙</span> ElevenLabs API <span style={{ color:C.muted,fontSize:12,fontWeight:400 }}>(opcional)</span>
+        </div>
+        <Inp label="API Key" value={ek} onChange={setEk} placeholder="sua-chave-elevenlabs..."/>
+        <div style={{ fontSize:12,color:C.muted }}>Necessário apenas para gerar narração em áudio dos scripts.</div>
+      </Card>
+      <Btn onClick={salvar} variant={saved?"cyan":"primary"}>
+        {saved ? "✓ Salvo com sucesso!" : "💾 Salvar Configurações"}
+      </Btn>
+      <div style={{ marginTop:20,background:"#0d1a0e",border:`1px solid ${C.green}33`,borderRadius:10,
+        padding:14,fontSize:12,color:C.muted,lineHeight:1.7 }}>
+        🔒 Suas chaves ficam apenas no <strong>localStorage</strong> do seu device. Nunca são enviadas a nenhum servidor além das APIs oficiais da Anthropic e ElevenLabs.
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// APP ROOT
+// ══════════════════════════════════════════════════════════════════════════════
+const App = () => {
+  const [page, setPage] = useState("home");
+  const [claudeKey, setClaudeKey] = useState(()=>localStorage.getItem("vb_claude")||"");
+  const [elKey, setElKey] = useState(()=>localStorage.getItem("vb_el")||"");
+  const [err, setErr] = useState("");
+
+  const callClaude = useClaude(claudeKey, setErr);
+
+  const nav = [
+    {id:"home",icon:"🏠",label:"Início"},
+    {id:"finder",icon:"🔥",label:"Finder"},
+    {id:"decoder",icon:"🔓",label:"Decoder"},
+    {id:"studio",icon:"✍️",label:"Script"},
+    {id:"multi",icon:"🎯",label:"Ângulos"},
+    {id:"score",icon:"📊",label:"Score"},
+    {id:"cal",icon:"📅",label:"Cal."},
+    {id:"config",icon:"⚙️",label:"Config"},
+  ];
+
+  const pages = {
+    home: <Home setPage={setPage} hasKey={!!claudeKey}/>,
+    finder: <ViralFinder callClaude={callClaude} setErr={setErr}/>,
+    decoder: <HookDecoder callClaude={callClaude} setErr={setErr}/>,
+    studio: <ScriptStudio callClaude={callClaude} elKey={elKey} setErr={setErr}/>,
+    multi: <MultiAngulo callClaude={callClaude} setErr={setErr}/>,
+    score: <ScoreViral callClaude={callClaude} setErr={setErr}/>,
+    cal: <Calendario callClaude={callClaude} setErr={setErr}/>,
+    config: <Config claudeKey={claudeKey} setClaudeKey={setClaudeKey} elKey={elKey} setElKey={setElKey}/>,
+  };
+
+  return (
+    <div style={{ background:C.bg,minHeight:"100vh",color:C.text,
+      fontFamily:"'Inter',-apple-system,sans-serif",paddingBottom:72 }}>
+
+      {/* Header */}
+      <div style={{ background:C.card,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",
+        display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:100 }}>
+        <span style={{ fontSize:22 }}>⚡</span>
+        <span style={{ fontWeight:900,fontSize:19,
+          background:`linear-gradient(90deg,${C.accent},${C.cyan})`,
+          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>
+          ViralBuilder
+        </span>
+        <span style={{ marginLeft:"auto",fontSize:11,color:C.muted,background:C.card2,
+          padding:"3px 9px",borderRadius:20,border:`1px solid ${C.border}` }}>
+          TikTok Shop IA
+        </span>
+      </div>
+
+      {/* Erro */}
+      {err && (
+        <div style={{ background:"#1a0606",border:`1px solid ${C.accent}44`,color:"#f87171",
+          padding:"10px 16px",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <span>⚠️ {err}</span>
+          <span onClick={()=>setErr("")} style={{ cursor:"pointer",fontSize:18,opacity:0.6 }}>✕</span>
+        </div>
+      )}
+
+      {/* Conteúdo */}
+      <div style={{ padding:"16px",maxWidth:640,margin:"0 auto" }}>
+        {pages[page]}
+      </div>
+
+      {/* Nav inferior */}
+      <div style={{ position:"fixed",bottom:0,left:0,right:0,background:C.card,
+        borderTop:`1px solid ${C.border}`,display:"flex",overflowX:"auto",
+        padding:"6px 0",WebkitOverflowScrolling:"touch" }}>
+        {nav.map(p=>(
+          <button key={p.id} onClick={()=>setPage(p.id)} style={{ flex:"0 0 auto",display:"flex",
+            flexDirection:"column",alignItems:"center",gap:3,padding:"6px 13px",
+            background:"none",border:"none",cursor:"pointer",
+            color:page===p.id?C.accent:C.muted,minWidth:60,transition:"color 0.15s" }}>
+            <span style={{ fontSize:17 }}>{p.icon}</span>
+            <span style={{ fontSize:10,fontWeight:page===p.id?700:400 }}>{p.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
