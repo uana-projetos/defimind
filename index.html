@@ -623,6 +623,33 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 @keyframes wup-spin{to{transform:rotate(360deg)}}
 .wup-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(59,158,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:wup-spin .7s linear infinite;vertical-align:middle;margin-right:.4rem}
 .wup-loading{display:flex;align-items:center;justify-content:center;padding:1rem;color:var(--muted);font-size:.75rem}
+
+/* ═══ STRATEGY GUIDE ═══ */
+.sg-top-pick{background:linear-gradient(135deg,rgba(59,158,255,.1),rgba(74,222,128,.06));border:1px solid rgba(59,158,255,.3);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem}
+.sg-top-pick-label{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.4rem;display:flex;align-items:center;gap:.3rem}
+.sg-top-pick-name{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:.15rem}
+.sg-top-pick-meta{font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+.sg-top-pick-apy{font-size:1.6rem;font-weight:800;color:var(--green);display:inline-block;margin-bottom:.5rem}
+.sg-top-pick-apy span{font-size:.7rem;color:var(--muted);font-weight:400;margin-left:.25rem}
+.sg-steps{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
+.sg-step{display:flex;align-items:flex-start;gap:.6rem;padding:.5rem .7rem;background:rgba(255,255,255,.03);border-radius:8px;border-left:2px solid rgba(59,158,255,.3)}
+.sg-step-num{font-size:.65rem;font-weight:800;color:var(--cyan);min-width:16px;margin-top:.05rem}
+.sg-step-text{font-size:.76rem;color:var(--text);line-height:1.45}
+.sg-step-text strong{color:var(--cyan)}
+.sg-step-text a{color:var(--cyan);text-decoration:none}
+.sg-step-text a:hover{text-decoration:underline}
+.sg-guide-block{margin-bottom:1rem}
+.sg-guide-title{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.3rem}
+.sg-params{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
+.sg-param-chip{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.72rem}
+.sg-param-chip strong{color:var(--cyan);display:block;font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.1rem}
+.sg-link-btn{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--cyan);border:1px solid rgba(59,158,255,.35);border-radius:6px;padding:5px 12px;text-decoration:none;background:rgba(59,158,255,.07);transition:all .2s;cursor:pointer}
+.sg-link-btn:hover{background:rgba(59,158,255,.15)}
+@media(max-width:480px){
+  .sg-top-pick{padding:.75rem .85rem}
+  .sg-top-pick-apy{font-size:1.3rem}
+  .sg-params{flex-direction:column}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -7039,23 +7066,47 @@ let _currentAsset = '';
 
 const STRAT_CONFIG = {
   stable: {
-    title: '🪙 Yield Estável — Stablecoins',
-    body: 'Fornece liquidez em pares estáveis (USDC/USDT/DAI). Praticamente zero impermanent loss. Ideal para quem quer rendimento sem risco direcional — equivale a uma renda fixa DeFi.',
-    risk: '🟢 Risco baixo · Sem IL · Ideal para capital de reserva',
+    title: 'Yield Estavel — Stablecoins',
+    body: 'Fornece liquidez em pares estaveis (USDC/USDT/DAI). Praticamente zero impermanent loss. Ideal para quem quer rendimento sem risco direcional.',
+    risk: 'Risco baixo · Sem IL · Ideal para capital de reserva',
     riskColor: 'var(--green)',
+    riskEmoji: '🟢',
+    protocols: ['Aave', 'Morpho', 'Curve', 'Kamino', 'Hyperlend'],
+    protocolLinks: { 'Aave': 'https://app.aave.com', 'Morpho': 'https://app.morpho.org', 'Curve': 'https://curve.fi', 'Kamino': 'https://app.kamino.finance', 'Hyperlend': 'https://hyperlend.finance' },
+    steps: [
+      { text: 'Escolha o pool abaixo com melhor APY (recomendado: <strong>USDC ou USDT</strong> — liquidez imediata)' },
+      { text: 'Acesse o protocolo clicando em <strong>Acessar</strong> — Aave e Morpho sao os mais seguros para stablecoins' },
+      { text: 'Deposite sua stablecoin na aba <strong>Supply / Deposit</strong>. Nao precisa de par — so um ativo.' },
+      { text: 'Receba rendimento automatico. Pode sacar a qualquer momento sem lock. Acompanhe o APY aqui no painel.' },
+    ],
+    params: [],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
-      return (sym.includes('USDC')||sym.includes('USDT')||sym.includes('DAI')||sym.includes('FRAX')||sym.includes('LUSD')||sym.includes('CRVUSD'))
+      return (sym.includes('USDC')||sym.includes('USDT')||sym.includes('DAI')||sym.includes('FRAX')||sym.includes('LUSD')||sym.includes('CRVUSD')||sym.includes('USDE'))
         && p.apy > 0 && p.tvlUsd > 100000;
     }),
     sort: pools => pools.sort((a,b) => b.apy - a.apy),
     showAssetFilter: false,
   },
   fees: {
-    title: '🏦 Coletar Taxas — Máximo APY',
-    body: 'Pools com alto volume em relação ao TVL geram mais taxas. Aceita volatilidade e impermanent loss em troca de APY elevado. Funciona melhor com pares que você já quer segurar de qualquer forma.',
-    risk: '🟡 Risco médio · IL possível · Ideal para ativos voláteis que você já tem',
+    title: 'Coletar Taxas — Maximo APY',
+    body: 'Pools com alto volume em relacao ao TVL geram mais taxas. Aceita volatilidade e impermanent loss em troca de APY elevado.',
+    risk: 'Risco medio · IL possivel · Ideal para ativos volateis que voce ja tem',
     riskColor: '#f59e0b',
+    riskEmoji: '🟡',
+    protocols: ['Uniswap V3', 'Camelot', 'Orca', 'Raydium'],
+    protocolLinks: { 'Uniswap V3': 'https://app.uniswap.org', 'Camelot': 'https://app.camelot.exchange', 'Orca': 'https://www.orca.so', 'Raydium': 'https://raydium.io' },
+    steps: [
+      { text: 'Escolha o par que voce quer no grid abaixo — priorize pares com <strong>alto TVL e APY > 20%</strong>' },
+      { text: 'Acesse o protocolo. Para pares EVM use <strong>Uniswap V3</strong>. Para Solana use <strong>Orca ou Raydium</strong>' },
+      { text: 'Configure o range <strong>CENTRADO no preco atual</strong> com ±5% a ±15% de distancia. Range menor = mais taxas mas sai do range mais rapido.' },
+      { text: 'Deposite <strong>ambos os ativos</strong> do par em proporcao 50/50. Monitore e rebalanceie quando sair do range.' },
+    ],
+    params: [
+      { label: 'Range sugerido', value: '±5% a ±15% do preco atual' },
+      { label: 'Rebalancear quando', value: 'Preco sair do range' },
+      { label: 'Melhor para', value: 'ETH-USDC, SOL-USDC, BTC-USDC' },
+    ],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
       const notStable = !sym.includes('USDC')&&!sym.includes('USDT')&&!sym.includes('DAI')&&!sym.includes('FRAX');
@@ -7065,38 +7116,80 @@ const STRAT_CONFIG = {
     showAssetFilter: true,
   },
   dca_buy: {
-    title: '📥 DCA Compra — Acumular Gradualmente',
-    body: 'Coloca liquidez concentrada ABAIXO do preço atual (Uniswap V3 / Camelot). Enquanto o ativo não cair até seu range, você coleta taxas. Se cair, você "compra" na faixa escolhida automaticamente. Estratégia clássica de acumulação com geração de renda.',
-    risk: '🟡 Risco médio · Você define o preço de compra · Funciona em Uniswap V3, Camelot, Orca',
+    title: 'DCA Compra — Acumular Gradualmente',
+    body: 'Coloca liquidez concentrada ABAIXO do preco atual. Enquanto o ativo nao cair ate seu range, voce coleta taxas. Quando cair, voce vai comprando gradualmente.',
+    risk: 'Risco medio · Voce define o preco de compra · Funciona em Uniswap V3, Camelot, Orca',
     riskColor: '#f59e0b',
+    riskEmoji: '🟡',
+    protocols: ['Uniswap V3', 'Camelot', 'Orca', 'Raydium'],
+    protocolLinks: { 'Uniswap V3': 'https://app.uniswap.org/add', 'Camelot': 'https://app.camelot.exchange', 'Orca': 'https://www.orca.so/pools', 'Raydium': 'https://raydium.io/clmm/pools/' },
+    steps: [
+      { text: 'Defina <strong>quanto voce quer pagar</strong> pelo ativo. Exemplo: ETH esta em $1.677 e voce quer comprar a $1.400.' },
+      { text: 'Va para <strong>Uniswap V3</strong> (EVM) ou <strong>Orca</strong> (Solana). Selecione o par ex: ETH/USDC.' },
+      { text: 'Configure o range <strong>ABAIXO do preco atual</strong>. Exemplo: range de $1.300 a $1.550. Deposite <strong>somente USDC</strong> — nao precisa de ETH.' },
+      { text: 'Enquanto ETH fica acima de $1.550 voce coleta taxas. Quando cair pro range voce vai comprando ETH automaticamente.' },
+    ],
+    params: [
+      { label: 'Range sugerido', value: '-5% a -20% do preco atual' },
+      { label: 'Depositar', value: 'Somente a stablecoin (USDC/USDT)' },
+      { label: 'Resultado', value: 'Compra automatica ao cair + taxas enquanto espera' },
+    ],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
       const proj = (p.project||'').toLowerCase();
-      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('aerodrome');
+      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('pancake')||proj.includes('aerodrome');
       return isDex && p.apy > 0 && p.tvlUsd > 100000;
     }),
     sort: pools => pools.sort((a,b) => b.tvlUsd - a.tvlUsd),
     showAssetFilter: true,
   },
   dca_sell: {
-    title: '📤 DCA Venda — Realizar Gradualmente',
-    body: 'Coloca liquidez concentrada ACIMA do preço atual. Enquanto não atingir seu range, coleta taxas. Quando o preço subir até lá, você vai vendendo gradualmente. Ideal para quem tem um preço-alvo de saída e quer ganhar enquanto espera.',
-    risk: '🟡 Risco médio · Você define o preço de venda · Mesmos protocolos do DCA Compra',
+    title: 'DCA Venda — Realizar Gradualmente',
+    body: 'Coloca liquidez concentrada ACIMA do preco atual. Enquanto nao atingir seu range, coleta taxas. Quando o preco subir ate la, voce vai vendendo gradualmente.',
+    risk: 'Risco medio · Voce define o preco de venda · Mesmos protocolos do DCA Compra',
     riskColor: '#f59e0b',
+    riskEmoji: '🟡',
+    protocols: ['Uniswap V3', 'Camelot', 'Orca', 'Raydium'],
+    protocolLinks: { 'Uniswap V3': 'https://app.uniswap.org/add', 'Camelot': 'https://app.camelot.exchange', 'Orca': 'https://www.orca.so/pools', 'Raydium': 'https://raydium.io/clmm/pools/' },
+    steps: [
+      { text: 'Defina <strong>a que preco voce quer vender</strong>. Exemplo: ETH esta em $1.677 e voce quer vender a $2.000.' },
+      { text: 'Va para <strong>Uniswap V3</strong> (EVM) ou <strong>Orca</strong> (Solana). Selecione o par ex: ETH/USDC.' },
+      { text: 'Configure o range <strong>ACIMA do preco atual</strong>. Exemplo: range de $1.800 a $2.200. Deposite <strong>somente ETH</strong> — nao precisa de USDC.' },
+      { text: 'Enquanto ETH fica abaixo de $1.800 voce coleta taxas. Quando subir ate o range voce vai vendendo ETH automaticamente.' },
+    ],
+    params: [
+      { label: 'Range sugerido', value: '+10% a +40% do preco atual' },
+      { label: 'Depositar', value: 'Somente o ativo (ETH, SOL, BTC...)' },
+      { label: 'Resultado', value: 'Venda automatica ao subir + taxas enquanto espera' },
+    ],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
       const proj = (p.project||'').toLowerCase();
-      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('aerodrome');
+      const isDex = proj.includes('uniswap')||proj.includes('camelot')||proj.includes('orca')||proj.includes('raydium')||proj.includes('pancake')||proj.includes('aerodrome');
       return isDex && p.apy > 0 && p.tvlUsd > 100000;
     }),
     sort: pools => pools.sort((a,b) => b.apy - a.apy),
     showAssetFilter: true,
   },
   staking: {
-    title: '⚡ Staking — APY Puro Sem IL',
-    body: 'Faz staking diretamente ou usa liquid staking (stETH, rETH, kHYPE). Zero impermanent loss. O ativo permanece exposto ao preço mas você acumula mais tokens ao longo do tempo. Ideal para quem pensa em 6-12+ meses.',
-    risk: '🟢 Risco baixo-médio · Sem IL · Exposição ao preço do ativo',
+    title: 'Staking — APY Puro Sem IL',
+    body: 'Faz staking diretamente ou usa liquid staking (stETH, rETH, kHYPE). Zero impermanent loss. O ativo permanece exposto ao preco — voce ganha yield em cima.',
+    risk: 'Risco baixo-medio · Sem IL · Exposicao ao preco do ativo',
     riskColor: 'var(--green)',
+    riskEmoji: '🟢',
+    protocols: ['Lido', 'Rocket Pool', 'Kinetiq', 'Jito'],
+    protocolLinks: { 'Lido': 'https://stake.lido.fi', 'Rocket Pool': 'https://rocketpool.net', 'Kinetiq': 'https://kinetiq.xyz', 'Jito': 'https://www.jito.network' },
+    steps: [
+      { text: 'Escolha o ativo que voce quer fazer staking: <strong>ETH</strong> (Lido/Rocket Pool), <strong>SOL</strong> (Jito), <strong>HYPE</strong> (Kinetiq).' },
+      { text: 'Acesse o protocolo e deposite seu ativo. Voce recebe um token de liquid staking: <strong>stETH, rETH, jitoSOL, kHYPE</strong>.' },
+      { text: 'O token cresce em valor automaticamente conforme o staking acumula recompensas. <strong>Nao precisa fazer nada.</strong>' },
+      { text: 'Opcional: use o token de liquid staking em protocolos DeFi (Aave, Morpho) para ganhar yield adicional em cima do staking.' },
+    ],
+    params: [
+      { label: 'ETH → stETH', value: 'Lido · ~3.5% APY · Sem lock' },
+      { label: 'SOL → jitoSOL', value: 'Jito · ~7-8% APY · Sem lock' },
+      { label: 'HYPE → kHYPE', value: 'Kinetiq · APY variavel' },
+    ],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
       const proj = (p.project||'').toLowerCase();
@@ -7109,10 +7202,24 @@ const STRAT_CONFIG = {
     showAssetFilter: false,
   },
   hold: {
-    title: '💎 Hold + Renda — Acredita no Ativo',
-    body: 'Você já quer segurar o ativo por convicção. Então por que não ganhar yield em cima? Fornece liquidez em pares como ETH/USDC ou BTC/USDC. Aceita o IL porque de qualquer jeito não iria vender. Otimiza: pool com TVL alto + projeto confiável + APY razoável.',
-    risk: '🟡 IL existe, mas você já estava exposto ao ativo de qualquer forma',
+    title: 'Hold + Renda — Acredita no Ativo',
+    body: 'Voce ja quer segurar o ativo por conviccao. Entao por que nao ganhar yield em cima? Fornece liquidez em pares como ETH/USDC com range largo.',
+    risk: 'IL existe, mas voce ja estava exposto ao ativo de qualquer forma',
     riskColor: '#f59e0b',
+    riskEmoji: '🟡',
+    protocols: ['Uniswap V3', 'Aerodrome', 'Camelot', 'Orca'],
+    protocolLinks: { 'Uniswap V3': 'https://app.uniswap.org/add', 'Aerodrome': 'https://aerodrome.finance', 'Camelot': 'https://app.camelot.exchange', 'Orca': 'https://www.orca.so' },
+    steps: [
+      { text: 'Escolha o ativo principal que voce ja tem (ETH, SOL, BTC, HYPE). Forme o par com USDC.' },
+      { text: 'Acesse um DEX com liquidez concentrada. <strong>Aerodrome</strong> (Base) e <strong>Uniswap V3</strong> (Ethereum/Arbitrum) sao os melhores.' },
+      { text: 'Configure um range <strong>LARGO: ±30% a ±50% do preco atual</strong>. Voce fica mais tempo dentro do range e coleta taxas por mais tempo.' },
+      { text: 'Deposite ambos os ativos. O IL vai existir, mas voce ja ia segurar o ativo de qualquer jeito — o yield e lucro extra.' },
+    ],
+    params: [
+      { label: 'Range sugerido', value: '±30% a ±50% do preco atual' },
+      { label: 'Depositar', value: 'Ativo + USDC em proporcao 50/50' },
+      { label: 'Rebalancear', value: 'Quando sair do range (raro com range largo)' },
+    ],
     filter: pools => pools.filter(p => {
       const sym = (p.symbol||'').toUpperCase();
       const hasMajor = sym.includes('ETH')||sym.includes('BTC')||sym.includes('SOL')||sym.includes('HYPE');
@@ -7142,76 +7249,126 @@ function renderStratResults() {
   const cfg = STRAT_CONFIG[_currentObj];
   if (!cfg) return;
 
-  // Mostrar explicação
+  // Mostrar explicacao basica
   const expEl = document.getElementById('strat-explanation');
   document.getElementById('strat-exp-title').textContent = cfg.title;
   document.getElementById('strat-exp-body').textContent = cfg.body;
-  document.getElementById('strat-exp-risk').innerHTML = `<span style="color:${cfg.riskColor}">${cfg.risk}</span>`;
+  document.getElementById('strat-exp-risk').innerHTML = `<span style="color:${cfg.riskColor}">${cfg.riskEmoji} ${cfg.risk}</span>`;
   expEl.style.display = '';
 
   // Filtro de ativo
   const assetFilter = document.getElementById('strat-asset-filter');
   assetFilter.style.display = cfg.showAssetFilter ? '' : 'none';
 
-  // Usar dados já carregados pelo app principal
   const allPools = window._allPools || [];
   if (!allPools.length) {
-    document.getElementById('strat-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">⏳ Aguardando dados dos pools... Volte em alguns segundos.</div>';
+    document.getElementById('strat-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Carregando pools...</div>';
     return;
   }
 
   let filtered = cfg.filter(allPools);
-
-  // Filtro de ativo adicional
-  if (_currentAsset) {
-    filtered = filtered.filter(p => (p.symbol||'').toUpperCase().includes(_currentAsset));
-  }
-
+  if (_currentAsset) filtered = filtered.filter(p => (p.symbol||'').toUpperCase().includes(_currentAsset));
   filtered = cfg.sort(filtered).slice(0, 20);
 
-  if (!filtered.length) {
-    document.getElementById('strat-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Nenhum pool encontrado para este filtro.</div>';
-    return;
-  }
+  // ── Top pick ──
+  const top = filtered[0];
+  const topPickHtml = top ? (() => {
+    const apy = top.apy ? top.apy.toFixed(1) : '?';
+    const tvl = top.tvlUsd ? '$' + (top.tvlUsd >= 1e6 ? (top.tvlUsd/1e6).toFixed(1)+'M' : (top.tvlUsd/1e3).toFixed(0)+'K') : '';
+    const protocolLink = cfg.protocolLinks?.[top.project] || cfg.protocolLinks?.[Object.keys(cfg.protocolLinks||{})[0]] || '#';
+    return `<div class="sg-top-pick">
+      <div class="sg-top-pick-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Melhor oportunidade agora
+      </div>
+      <div class="sg-top-pick-name">${top.symbol}</div>
+      <div class="sg-top-pick-meta">${top.project} · ${top.chain} · TVL ${tvl}</div>
+      <div class="sg-top-pick-apy">${apy}%<span>APY</span></div>
+      <a href="${protocolLink}" target="_blank" rel="noopener" class="sg-link-btn">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Acessar ${top.project}
+      </a>
+    </div>`;
+  })() : '';
 
+  // ── Guia de execucao ──
+  const stepsHtml = cfg.steps?.length ? `<div class="sg-guide-block">
+    <div class="sg-guide-title">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Como executar essa estrategia agora
+    </div>
+    <div class="sg-steps">
+      ${cfg.steps.map((s,i) => `<div class="sg-step"><div class="sg-step-num">${i+1}</div><div class="sg-step-text">${s.text}</div></div>`).join('')}
+    </div>
+  </div>` : '';
+
+  // ── Parametros sugeridos ──
+  const paramsHtml = cfg.params?.length ? `<div class="sg-guide-block">
+    <div class="sg-guide-title">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+      Parametros sugeridos
+    </div>
+    <div class="sg-params">
+      ${cfg.params.map(p => `<div class="sg-param-chip"><strong>${p.label}</strong>${p.value}</div>`).join('')}
+    </div>
+  </div>` : '';
+
+  // ── Protocolos recomendados ──
+  const protosHtml = cfg.protocols?.length ? `<div class="sg-guide-block" style="margin-bottom:.75rem">
+    <div class="sg-guide-title">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Protocolos recomendados
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+      ${cfg.protocols.map(p => {
+        const link = cfg.protocolLinks?.[p];
+        return link
+          ? `<a href="${link}" target="_blank" rel="noopener" class="sg-link-btn">${p}</a>`
+          : `<span class="sg-link-btn" style="cursor:default">${p}</span>`;
+      }).join('')}
+    </div>
+  </div>` : '';
+
+  // ── Pool cards grid ──
   const cards = filtered.map((p, i) => {
-    const apy = p.apy ? p.apy.toFixed(1) + '%' : '—';
-    const tvl = p.tvlUsd ? '$' + fmt2(p.tvlUsd) : '—';
-    const chain = p.chain || '';
-    const proj = p.project || '';
-    const sym = p.symbol || '';
-
-    // Tags
+    const apy = p.apy ? p.apy.toFixed(1) + '%' : '-';
+    const tvl = p.tvlUsd ? '$' + (p.tvlUsd >= 1e6 ? (p.tvlUsd/1e6).toFixed(1)+'M' : (p.tvlUsd/1e3).toFixed(0)+'K') : '-';
     const tags = [];
-    if (p.apy > 50) tags.push({label:'🔥 Alto APY', bg:'rgba(239,68,68,.15)', col:'var(--red)'});
-    if (p.tvlUsd > 10e6) tags.push({label:'🐋 TVL Alto', bg:'rgba(59,158,255,.1)', col:'var(--cyan)'});
-    if ((sym.includes('USDC')||sym.includes('USDT')||sym.includes('DAI'))) tags.push({label:'💵 Estável', bg:'rgba(34,197,94,.1)', col:'var(--green)'});
-    if (p.apy > 0 && p.apy < 15) tags.push({label:'✅ APY sustentável', bg:'rgba(34,197,94,.08)', col:'var(--green)'});
-    if ((proj.includes('uniswap')||proj.includes('curve')||proj.includes('aave'))) tags.push({label:'🛡️ Protocolo confiável', bg:'rgba(167,139,250,.1)', col:'var(--purple)'});
-
-    const tagHtml = tags.map(t => `<span class="strat-tag" style="background:${t.bg};color:${t.col}">${t.label}</span>`).join('');
-
+    if (p.apy > 50) tags.push({l:'🔥 Alto APY', bg:'rgba(239,68,68,.15)', c:'var(--red)'});
+    if (p.tvlUsd > 10e6) tags.push({l:'🐋 TVL Alto', bg:'rgba(59,158,255,.1)', c:'var(--cyan)'});
+    if ((p.symbol||'').toUpperCase().match(/USDC|USDT|DAI/)) tags.push({l:'💵 Estavel', bg:'rgba(34,197,94,.08)', c:'var(--green)'});
+    if (p.apy > 0 && p.apy < 15) tags.push({l:'✅ APY sustentavel', bg:'rgba(34,197,94,.08)', c:'var(--green)'});
+    if ((p.project||'').match(/uniswap|curve|aave/i)) tags.push({l:'🛡️ Protocolo confiavel', bg:'rgba(59,158,255,.08)', c:'var(--cyan)'});
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-
-    return `<div class="strat-card">
+    const sym = p.symbol || '';
+    const protocolLink = cfg.protocolLinks?.[p.project] || '';
+    return `<div class="strat-card" style="cursor:${protocolLink?'pointer':'default'}" ${protocolLink ? `onclick="window.open('${protocolLink}','_blank')"` : ''}>
       <div>
-        <div class="strat-card-name" style="display:flex;align-items:center;gap:.4rem">${medal} ${coinIcon(sym.split("/")[0],"sm")}<span>${sym}</span></div>
-        <div class="strat-card-meta">${proj} · ${chain}</div>
+        <div class="strat-card-name" style="display:flex;align-items:center;gap:.4rem">${medal} ${coinIcon(sym.split('/')[0].split('-')[0])}${sym}</div>
+        <div class="strat-card-meta">${p.project||''} · ${p.chain||''}</div>
       </div>
       <div>
         <div class="strat-card-apy">${apy}</div>
         <div class="strat-card-tvl">TVL ${tvl}</div>
       </div>
-      <div class="strat-card-tags">${tagHtml}</div>
+      <div class="strat-card-tags">${tags.map(t=>`<span class="strat-tag" style="background:${t.bg};color:${t.c}">${t.l}</span>`).join('')}</div>
     </div>`;
   }).join('');
 
-  document.getElementById('strat-results').innerHTML = `
-    <div class="strat-section-title">Top ${filtered.length} pools para essa estratégia</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem">${cards}</div>
-    <div style="font-size:.62rem;color:var(--muted);margin-top:.75rem;text-align:center">Dados: DefiLlama · Não é recomendação financeira · Verifique IL e riscos antes de entrar</div>
-  `;
+  const gridHtml = filtered.length
+    ? `<div class="sg-guide-block">
+        <div class="sg-guide-title">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Todos os pools compativeis (${filtered.length}) — clique para acessar
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.55rem">${cards}</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:.6rem;text-align:center">Dados: DefiLlama · Nao e recomendacao financeira · Verifique riscos antes de investir</div>
+      </div>`
+    : '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Nenhum pool encontrado para esse filtro</div>';
+
+  document.getElementById('strat-results').innerHTML = topPickHtml + stepsHtml + paramsHtml + protosHtml + gridHtml;
 }
+
 async function refreshHLAll() {
   await Promise.all([loadHLFunding(), loadHLVaults(), loadHLLend(), loadHLSpot(), loadHLEvm(), loadHLStaking()]);
 }
