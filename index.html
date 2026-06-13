@@ -7245,7 +7245,7 @@ function removeMyAsset(i) {
   updateRiskMonitor();
 }
 
-// ── HL position fetch ──
+// ── Position fetch: HL + EVM tokens + Solana ──
 async function fetchHLPositions(addr) {
   try {
     const [perpRes, spotRes] = await Promise.all([
@@ -7255,9 +7255,47 @@ async function fetchHLPositions(addr) {
     const perp = await perpRes.json();
     const spot = await spotRes.json();
     return { perp, spot };
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
+}
+
+async function fetchEvmTokens(addr) {
+  // Ethplorer freekey — public, no registration needed, rate-limited but generous
+  try {
+    const res = await fetch(`https://api.ethplorer.io/getAddressInfo/${addr}?apiKey=freekey`);
+    const data = await res.json();
+    return data;
+  } catch(e) { return null; }
+}
+
+async function fetchSolTokens(addr) {
+  // Solana public RPC — get SPL token accounts
+  try {
+    const res = await fetch('https://api.mainnet-beta.solana.com', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'getTokenAccountsByOwner',
+        params: [addr, {programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'}, {encoding: 'jsonParsed'}]
+      })
+    });
+    const data = await res.json();
+    return data?.result?.value || [];
+  } catch(e) { return []; }
+}
+
+function coinIconUrl(sym) {
+  const override = (typeof COIN_ICON_OVERRIDE !== 'undefined') ? COIN_ICON_OVERRIDE : {};
+  if (override[sym]) return override[sym];
+  const map = (typeof COIN_ICON_MAP !== 'undefined') ? COIN_ICON_MAP : {};
+  if (map[sym]) return `https://cdn.jsdelivr.net/gh/ErikThiart/cryptocurrency-icons@master/32/${sym.toLowerCase()}.png`;
+  return null;
+}
+
+function tokenIcon(sym) {
+  const url = coinIconUrl(sym);
+  if (url) return `<img src="${url}" width="18" height="18" style="border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:.3rem" onerror="this.style.display='none'">`;
+  return `<span style="width:18px;height:18px;background:rgba(59,158,255,.15);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--cyan);vertical-align:middle;margin-right:.3rem">${sym.charAt(0)}</span>`;
 }
 
 async function fetchAllPositions() {
@@ -7265,58 +7303,178 @@ async function fetchAllPositions() {
   if (!grid) return;
   const wallets = getWallets();
   if (!wallets.length) { grid.innerHTML = '<div class="pos-empty">Adicione uma carteira primeiro</div>'; return; }
-  grid.innerHTML = '<div class="pos-empty">Buscando posicoes...</div>';
+  grid.innerHTML = '<div class="pos-empty">Buscando posicoes em todas as carteiras...</div>';
 
-  const cards = [];
+  const sections = [];
+
   for (const w of wallets) {
-    const label = w.label || (w.type === 'evm' ? 'EVM' : 'SOL');
-    // Try HL fetch for EVM wallets
+    const label = w.label || (w.type === 'evm' ? w.addr.slice(0,6)+'...'+w.addr.slice(-4) : w.addr.slice(0,6)+'...');
+    const walletCards = [];
+
     if (w.type === 'evm') {
-      const data = await fetchHLPositions(w.addr);
-      if (data?.perp?.assetPositions?.length) {
-        for (const pos of data.perp.assetPositions) {
-          const p = pos.position;
-          if (!p || parseFloat(p.szi) === 0) continue;
-          const side = parseFloat(p.szi) > 0 ? 'LONG' : 'SHORT';
-          const pnl = parseFloat(p.unrealizedPnl || 0);
-          const pnlStr = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
-          const pnlClass = pnl >= 0 ? 'pos-pnl-pos' : 'pos-pnl-neg';
-          cards.push(`<div class="pos-card">
-            <div class="pos-card-left">
-              <div><span class="pos-tag perp">PERP</span><span style="font-size:.6rem;color:var(--muted);margin-left:.3rem">${label}</span></div>
-              <div class="pos-card-name">${p.coin} <span style="color:${side==='LONG'?'var(--green)':'var(--red)'}; font-size:.72rem">${side}</span></div>
-              <div class="pos-card-sub">Tamanho: ${Math.abs(parseFloat(p.szi)).toFixed(4)} | Entrada: $${parseFloat(p.entryPx||0).toFixed(2)} | Liq: $${parseFloat(p.liquidationPx||0).toFixed(2)}</div>
-            </div>
-            <div class="pos-card-right"><div class="${pnlClass}">PnL: $${pnlStr}</div></div>
-          </div>`);
+      // ── 1. Hyperliquid positions ──
+      const hlData = await fetchHLPositions(w.addr);
+      let hlSection = '';
+
+      if (hlData?.perp?.assetPositions?.length) {
+        const openPerps = hlData.perp.assetPositions.filter(p => parseFloat(p.position?.szi) !== 0);
+        if (openPerps.length) {
+          hlSection += openPerps.map(pos => {
+            const p = pos.position;
+            const side = parseFloat(p.szi) > 0 ? 'LONG' : 'SHORT';
+            const pnl = parseFloat(p.unrealizedPnl || 0);
+            const pnlStr = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
+            const pnlClass = pnl >= 0 ? 'pos-pnl-pos' : 'pos-pnl-neg';
+            return `<div class="pos-card">
+              <div class="pos-card-left">
+                <div><span class="pos-tag perp">PERP HL</span></div>
+                <div class="pos-card-name">${tokenIcon(p.coin)}${p.coin} <span style="color:${side==='LONG'?'var(--green)':'var(--red)'};font-size:.72rem">${side}</span></div>
+                <div class="pos-card-sub">Tamanho: ${Math.abs(parseFloat(p.szi)).toFixed(4)} | Entrada: $${parseFloat(p.entryPx||0).toFixed(2)} | Liq: $${parseFloat(p.liquidationPx||0).toFixed(2)}</div>
+              </div>
+              <div class="pos-card-right"><div class="${pnlClass}">PnL $${pnlStr}</div></div>
+            </div>`;
+          }).join('');
         }
       }
-      // Spot balances from HL
-      if (data?.spot?.balances?.length) {
-        for (const b of data.spot.balances) {
-          const amt = parseFloat(b.total || 0);
-          if (amt < 0.001) continue;
-          cards.push(`<div class="pos-card">
+
+      // HL spot balances
+      if (hlData?.spot?.balances?.length) {
+        const hlSpot = hlData.spot.balances.filter(b => parseFloat(b.total) > 0.0001);
+        if (hlSpot.length) {
+          hlSection += hlSpot.map(b => `<div class="pos-card">
             <div class="pos-card-left">
-              <div><span class="pos-tag spot">SPOT</span><span style="font-size:.6rem;color:var(--muted);margin-left:.3rem">Hyperliquid</span></div>
-              <div class="pos-card-name">${b.coin}</div>
+              <div><span class="pos-tag spot">SPOT HL</span></div>
+              <div class="pos-card-name">${tokenIcon(b.coin)}${b.coin}</div>
+              <div class="pos-card-sub">Saldo: ${parseFloat(b.total).toFixed(4)}</div>
+            </div>
+          </div>`).join('');
+        }
+      }
+
+      // ── 2. EVM token holdings via Ethplorer ──
+      const ethData = await fetchEvmTokens(w.addr);
+      let ethSection = '';
+      if (ethData) {
+        // ETH native
+        const ethBal = parseFloat(ethData.ETH?.balance || 0);
+        const ethUsd = parseFloat(ethData.ETH?.price?.rate || 0);
+        if (ethBal > 0.0001) {
+          const usdVal = (ethBal * ethUsd).toFixed(2);
+          ethSection += `<div class="pos-card">
+            <div class="pos-card-left">
+              <div><span class="pos-tag spot">HOLDING</span> <span style="font-size:.6rem;color:var(--muted)">Ethereum</span></div>
+              <div class="pos-card-name">${tokenIcon('ETH')}ETH</div>
+              <div class="pos-card-sub">${ethBal.toFixed(4)} ETH</div>
+            </div>
+            <div class="pos-card-right"><div class="pos-apy">$${parseFloat(usdVal).toLocaleString()}</div></div>
+          </div>`;
+        }
+        // ERC-20 tokens
+        const tokens = (ethData.tokens || [])
+          .filter(t => parseFloat(t.tokenInfo?.price?.rate || 0) > 0 && parseFloat(t.balance) > 0)
+          .map(t => {
+            const dec = parseInt(t.tokenInfo.decimals || 18);
+            const bal = parseFloat(t.balance) / Math.pow(10, dec);
+            const price = parseFloat(t.tokenInfo.price?.rate || 0);
+            const usd = bal * price;
+            return { sym: t.tokenInfo.symbol || '?', bal, price, usd, name: t.tokenInfo.name };
+          })
+          .filter(t => t.usd > 0.5)
+          .sort((a,b) => b.usd - a.usd)
+          .slice(0, 12);
+
+        ethSection += tokens.map(t => `<div class="pos-card">
+          <div class="pos-card-left">
+            <div><span class="pos-tag spot">TOKEN</span> <span style="font-size:.6rem;color:var(--muted)">ERC-20</span></div>
+            <div class="pos-card-name">${tokenIcon(t.sym)}${t.sym}</div>
+            <div class="pos-card-sub">${t.bal.toFixed(4)} ${t.sym}</div>
+          </div>
+          <div class="pos-card-right"><div class="pos-apy">$${t.usd.toLocaleString(undefined,{maximumFractionDigits:2})}</div></div>
+        </div>`).join('');
+
+        if (!ethSection) {
+          ethSection = `<div class="pos-empty">Nenhum token EVM com valor encontrado</div>`;
+        }
+      } else {
+        ethSection = `<div class="pos-empty">Erro ao buscar tokens EVM (Ethplorer)</div>`;
+      }
+
+      // ── 3. DeFi protocol positions ──
+      const llamaLink = `https://portfolio.llama.fi/${w.addr}`;
+      const debankLink = `https://debank.com/profile/${w.addr}`;
+      const defiSection = `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0">
+        <a href="${llamaLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;color:var(--cyan);border:1px solid rgba(59,158,255,.3);border-radius:6px;padding:4px 10px;text-decoration:none">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Posicoes DeFi — DefiLlama
+        </a>
+        <a href="${debankLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:4px 10px;text-decoration:none">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Protocolos DeFi — DeBank
+        </a>
+      </div>
+      <div class="pos-empty" style="font-size:.67rem;text-align:left;padding:.5rem .7rem">
+        Para ver posicoes em Aave, Uniswap, Compound, Curve, etc. use os links acima. Esses protocolos precisam de um indexador externo para buscar posicoes abertas.
+      </div>`;
+
+      const allContent = [hlSection, ethSection, defiSection].filter(Boolean).join('');
+      sections.push(`<div style="margin-bottom:.8rem">
+        <div style="font-size:.72rem;font-weight:700;color:var(--cyan);margin-bottom:.4rem;display:flex;align-items:center;gap:.35rem">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+          ${label}
+        </div>
+        ${allContent}
+      </div>`);
+
+    } else {
+      // ── Solana wallet ──
+      const solBal = await fetchSolBalance(w.addr);
+      let solSection = '';
+      if (solBal !== null) {
+        solSection += `<div class="pos-card">
+          <div class="pos-card-left">
+            <div><span class="pos-tag spot">HOLDING</span> <span style="font-size:.6rem;color:var(--muted)">Solana</span></div>
+            <div class="pos-card-name">${tokenIcon('SOL')}SOL</div>
+            <div class="pos-card-sub">${solBal.toFixed(4)} SOL</div>
+          </div>
+        </div>`;
+      }
+
+      // SPL tokens
+      const splTokens = await fetchSolTokens(w.addr);
+      const validSpl = splTokens
+        .map(acc => acc.account?.data?.parsed?.info)
+        .filter(info => info && parseFloat(info.tokenAmount?.uiAmount) > 0)
+        .slice(0, 8);
+
+      if (validSpl.length) {
+        solSection += validSpl.map(info => {
+          const sym = info.mint?.slice(0,8) || 'TOKEN';
+          const amt = parseFloat(info.tokenAmount?.uiAmount || 0);
+          return `<div class="pos-card">
+            <div class="pos-card-left">
+              <div><span class="pos-tag spot">SPL</span> <span style="font-size:.6rem;color:var(--muted)">Solana</span></div>
+              <div class="pos-card-name" style="font-size:.74rem;overflow:hidden;text-overflow:ellipsis">${info.mint?.slice(0,16)}...</div>
               <div class="pos-card-sub">Saldo: ${amt.toFixed(4)}</div>
             </div>
-          </div>`);
-        }
+          </div>`;
+        }).join('');
       }
-      if (data && !data.perp?.assetPositions?.length && !data.spot?.balances?.filter(b=>parseFloat(b.total)>0.001).length) {
-        cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">Hyperliquid (${label}): sem posicoes abertas</div>`);
-      }
-      if (!data) {
-        cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">${label}: erro ao buscar HL</div>`);
-      }
-    } else {
-      cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">${label} (Solana): scan automatico nao disponivel — use <a href="https://portfolio.llama.fi/${w.addr}" target="_blank" style="color:var(--cyan)">DefiLlama Portfolio</a></div>`);
+
+      const solscanLink = `https://solscan.io/account/${w.addr}`;
+      const stepLink = `https://step.finance/en/portfolio?watching=${w.addr}`;
+      solSection += `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0">
+        <a href="${solscanLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;color:var(--cyan);border:1px solid rgba(59,158,255,.3);border-radius:6px;padding:4px 10px;text-decoration:none">Solscan Explorer</a>
+        <a href="${stepLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:4px 10px;text-decoration:none">Posicoes DeFi — Step Finance</a>
+      </div>`;
+
+      sections.push(`<div style="margin-bottom:.8rem">
+        <div style="font-size:.72rem;font-weight:700;color:var(--cyan);margin-bottom:.4rem">${label} (Solana)</div>
+        ${solSection}
+      </div>`);
     }
   }
 
-  grid.innerHTML = cards.length ? cards.join('') : '<div class="pos-empty">Nenhuma posicao ativa encontrada</div>';
+  grid.innerHTML = sections.join('') || '<div class="pos-empty">Nenhuma posicao encontrada</div>';
   updateRiskMonitor();
 }
 
