@@ -650,6 +650,57 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
   .sg-top-pick-apy{font-size:1.3rem}
   .sg-params{flex-direction:column}
 }
+
+/* ═══ UX UPGRADE ═══ */
+/* Global search */
+.global-search-wrap{padding:.45rem .8rem;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:49px;z-index:79}
+.global-search-inner{display:flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;transition:border-color .2s}
+.global-search-inner:focus-within{border-color:rgba(59,158,255,.5)}
+.global-search-inner svg{opacity:.4;flex-shrink:0}
+#globalSearchInput{background:none;border:none;outline:none;color:var(--text);font-size:.8rem;flex:1;min-width:0}
+#globalSearchInput::placeholder{color:var(--muted)}
+#globalSearchResults{position:absolute;left:.8rem;right:.8rem;top:calc(100% + 4px);background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:200;max-height:360px;overflow-y:auto;display:none}
+.gs-result-item{display:flex;align-items:center;gap:.65rem;padding:.6rem .85rem;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.gs-result-item:last-child{border-bottom:none}
+.gs-result-item:hover{background:rgba(59,158,255,.07)}
+.gs-result-tag{font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.gs-result-name{font-size:.8rem;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gs-result-sub{font-size:.67rem;color:var(--muted)}
+.gs-result-apy{font-size:.82rem;font-weight:700;color:var(--green);white-space:nowrap}
+.gs-empty{padding:1.2rem;text-align:center;color:var(--muted);font-size:.78rem}
+.gs-section-label{font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:.5rem .85rem .2rem;background:rgba(255,255,255,.02)}
+.gs-kbd{font-size:.6rem;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted);margin-left:.3rem}
+
+/* Welcome modal */
+.welcome-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+.welcome-card{background:var(--bg);border:1px solid rgba(59,158,255,.3);border-radius:16px;padding:1.8rem;max-width:440px;width:100%;box-shadow:0 16px 64px rgba(0,0,0,.6)}
+.welcome-logo{font-size:2rem;margin-bottom:.6rem}
+.welcome-title{font-size:1.2rem;font-weight:800;margin-bottom:.3rem}
+.welcome-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.5}
+.welcome-steps{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.4rem}
+.welcome-step{display:flex;align-items:center;gap:.75rem;padding:.6rem .8rem;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--border)}
+.welcome-step-icon{font-size:1.2rem;flex-shrink:0}
+.welcome-step-text{font-size:.78rem;line-height:1.4}
+.welcome-step-text strong{color:var(--cyan);display:block;font-size:.72rem;margin-bottom:.1rem}
+.welcome-btn{width:100%;background:linear-gradient(135deg,var(--cyan),#a855f7);border:none;border-radius:10px;color:#000;font-size:.88rem;font-weight:800;padding:.85rem;cursor:pointer;transition:opacity .2s}
+.welcome-btn:hover{opacity:.9}
+.welcome-skip{text-align:center;margin-top:.7rem;font-size:.7rem;color:var(--muted);cursor:pointer}
+.welcome-skip:hover{color:var(--text)}
+
+/* Better empty states */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;gap:.6rem}
+.empty-state-icon{font-size:2rem;opacity:.5}
+.empty-state-title{font-size:.88rem;font-weight:700;color:var(--text)}
+.empty-state-sub{font-size:.75rem;color:var(--muted);max-width:280px;line-height:1.5}
+.empty-state-btn{margin-top:.4rem;padding:6px 16px;border-radius:8px;border:1px solid rgba(59,158,255,.4);background:rgba(59,158,255,.08);color:var(--cyan);font-size:.75rem;cursor:pointer;transition:all .2s}
+.empty-state-btn:hover{background:rgba(59,158,255,.18)}
+
+@media(max-width:480px){
+  .global-search-wrap{top:44px;padding:.35rem .5rem}
+  .welcome-card{padding:1.2rem}
+  .welcome-title{font-size:1rem}
+  #globalSearchResults{left:.5rem;right:.5rem}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -727,6 +778,41 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
     </button>
   </div>
 </header>
+
+<!-- Global Search -->
+<div class="global-search-wrap" id="globalSearchWrap">
+  <div class="global-search-inner" style="position:relative">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="globalSearchInput" placeholder="Buscar pool, token ou protocolo... (/ para focar)" autocomplete="off" oninput="handleGlobalSearch(this.value)" onkeydown="handleSearchKey(event)">
+    <span class="gs-kbd" id="gsKbd">/</span>
+    <div id="globalSearchResults"></div>
+  </div>
+</div>
+
+<!-- Welcome modal (first visit) -->
+<div class="welcome-overlay" id="welcomeOverlay" style="display:none">
+  <div class="welcome-card">
+    <div class="welcome-logo">🧠</div>
+    <div class="welcome-title">Bem-vindo ao DefiMind</div>
+    <div class="welcome-sub">Seu painel de inteligencia DeFi em tempo real. Yields, pools, airdrops, emprestimos e carteiras — tudo num lugar.</div>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="welcome-step-icon">💰</div>
+        <div class="welcome-step-text"><strong>Explore Yields e Pools</strong>Veja as melhores oportunidades de APY em Ethereum, Solana, Arbitrum e mais</div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-icon">👁</div>
+        <div class="welcome-step-text"><strong>Monitore sua Carteira</strong>Cole seu endereco publico (sem conectar) e veja seus tokens e posicoes ao vivo</div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-icon">⚡</div>
+        <div class="welcome-step-text"><strong>Estrategias Personalizadas</strong>Escolha seu objetivo e veja um guia passo a passo com as melhores oportunidades agora</div>
+      </div>
+    </div>
+    <button class="welcome-btn" onclick="closeWelcome()">Comecar a explorar</button>
+    <div class="welcome-skip" onclick="closeWelcome()">Ja conheco, fechar</div>
+  </div>
+</div>
 
 <!-- Tab Navigation -->
 <nav class="tab-nav" id="tabNav">
@@ -903,7 +989,7 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
       <button class="pos-fetch-btn" id="wupFetchBtn" onclick="wupFetchClick()">Atualizar</button>
     </div>
     <div id="wupPositionsGrid">
-      <div class="pos-empty">Clique em Atualizar para buscar posicoes abertas das carteiras</div>
+      <div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">Buscando posicoes automaticamente...</div><div class="empty-state-sub">Suas posicoes HL e tokens EVM serao buscados ao abrir essa aba</div></div>
     </div>
   </div>
 
@@ -7483,7 +7569,7 @@ async function fetchAllPositions() {
   const grid = document.getElementById('wupPositionsGrid');
   if (!grid) return;
   const wallets = getWallets();
-  if (!wallets.length) { grid.innerHTML = '<div class="pos-empty">Adicione uma carteira primeiro</div>'; return; }
+  if (!wallets.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👁</div><div class="empty-state-title">Nenhuma carteira ainda</div><div class="empty-state-sub">Cole seu endereco publico para monitorar tokens, posicoes HL e receber sugestoes personalizadas</div><button class="empty-state-btn" onclick="openWalletModal()">+ Adicionar carteira</button></div>'; return; }
   grid.innerHTML = '<div class="wup-loading"><span class="wup-spinner"></span>Buscando posicoes...</div>';
   window._wupLastFetch = Date.now();
   let totalUsd = 0;
@@ -7700,7 +7786,7 @@ function renderManualPositions() {
   const grid = document.getElementById('manualPositionsGrid');
   if (!grid) return;
   const positions = getManualPositions();
-  if (!positions.length) { grid.innerHTML = '<div class="pos-empty">Nenhuma posicao registrada. Clique em "+ Registrar" para comecar.</div>'; return; }
+  if (!positions.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Nenhuma posicao registrada</div><div class="empty-state-sub">Registre suas posicoes abertas (yield, lending, pool LP) para monitorar APY, valor e risco num so lugar</div><button class="empty-state-btn" onclick="openAddPositionModal()">+ Registrar posicao</button></div>'; return; }
 
   const typeIcon = { yield:'💰', pool:'🌊', lending:'🏦', perp:'📈', spot:'💎' };
   const typeLabel = { yield:'Yield', pool:'Pool LP', lending:'Lending', perp:'Perp', spot:'Spot' };
@@ -7764,7 +7850,7 @@ function renderStrategySuggestions() {
   const pools = window._allPools || [];
 
   if (!assets.length && !manualPos.length) {
-    el.innerHTML = '<div class="pos-empty">Adicione seus ativos acima para ver oportunidades personalizadas</div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💡</div><div class="empty-state-title">Sem sugestoes ainda</div><div class="empty-state-sub">Adicione os tokens que voce tem acima (ex: ETH, USDC, SOL) e veja as melhores oportunidades de yield para eles</div></div>';
     return;
   }
 
@@ -7925,6 +8011,173 @@ window.addEventListener('hlFundingReady', function(e) {
     renderStrategySuggestions();
   }
 });
+
+
+// ═══ UX UPGRADE JS ═══
+
+// ── Welcome / onboarding ──
+function checkWelcome() {
+  if (!localStorage.getItem('defiWelcomeDone')) {
+    const ov = document.getElementById('welcomeOverlay');
+    if (ov) ov.style.display = 'flex';
+  }
+}
+function closeWelcome() {
+  localStorage.setItem('defiWelcomeDone', '1');
+  const ov = document.getElementById('welcomeOverlay');
+  if (ov) ov.style.display = 'none';
+}
+// Show on first visit after pools load
+setTimeout(checkWelcome, 1200);
+
+// ── Global search ──
+let _gsTimeout = null;
+function handleGlobalSearch(val) {
+  clearTimeout(_gsTimeout);
+  _gsTimeout = setTimeout(() => runGlobalSearch(val.trim()), 180);
+}
+
+function handleSearchKey(e) {
+  const res = document.getElementById('globalSearchResults');
+  if (e.key === 'Escape') { res.style.display = 'none'; e.target.value = ''; return; }
+  if (e.key === 'Enter') {
+    const first = res?.querySelector('.gs-result-item');
+    if (first) first.click();
+    return;
+  }
+  if (e.key === 'ArrowDown') {
+    const items = res?.querySelectorAll('.gs-result-item');
+    if (items?.length) { items[0].focus(); e.preventDefault(); }
+  }
+}
+
+// Keyboard shortcut: / to focus search
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    document.getElementById('globalSearchInput')?.focus();
+  }
+  if (e.key === 'Escape') {
+    const res = document.getElementById('globalSearchResults');
+    if (res) res.style.display = 'none';
+    document.getElementById('globalSearchInput')?.blur();
+  }
+});
+
+// Close on outside click
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('globalSearchWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const res = document.getElementById('globalSearchResults');
+    if (res) res.style.display = 'none';
+  }
+});
+
+function runGlobalSearch(q) {
+  const res = document.getElementById('globalSearchResults');
+  if (!res) return;
+  if (!q || q.length < 2) { res.style.display = 'none'; return; }
+
+  const qUp = q.toUpperCase();
+  const pools = window._allPools || [];
+  const results = [];
+
+  // Search pools/yields
+  const matchedPools = pools.filter(p => {
+    const sym = (p.symbol || '').toUpperCase();
+    const proj = (p.project || '').toUpperCase();
+    const chain = (p.chain || '').toUpperCase();
+    return sym.includes(qUp) || proj.includes(qUp) || chain.includes(qUp);
+  }).sort((a,b) => b.apy - a.apy).slice(0, 6);
+
+  if (matchedPools.length) {
+    results.push('<div class="gs-section-label">Pools / Yield</div>');
+    results.push(matchedPools.map(p => {
+      const apy = p.apy ? p.apy.toFixed(1) + '%' : '-';
+      const chain = p.chain || '';
+      const highlight = sym => sym.replace(new RegExp(q, 'gi'), m => `<span style="color:var(--cyan)">${m}</span>`);
+      return `<div class="gs-result-item" onclick="goToPool('${p.symbol}','${p.project}')" tabindex="0" onkeydown="if(event.key==='Enter')this.click()">
+        <span class="gs-result-tag" style="background:rgba(74,222,128,.15);color:var(--green)">YIELD</span>
+        <div style="flex:1;min-width:0">
+          <div class="gs-result-name">${highlight(p.symbol || '')}</div>
+          <div class="gs-result-sub">${p.project || ''} · ${chain}</div>
+        </div>
+        <div class="gs-result-apy">${apy}</div>
+      </div>`;
+    }).join(''));
+  }
+
+  // Search airdrops
+  const airdrops = (typeof AIRDROPS !== 'undefined' ? AIRDROPS : []).filter(a => {
+    const name = (a.name || a.project || '').toUpperCase();
+    return name.includes(qUp);
+  }).slice(0, 3);
+
+  if (airdrops.length) {
+    results.push('<div class="gs-section-label">Airdrops</div>');
+    results.push(airdrops.map(a => `<div class="gs-result-item" onclick="showTab('airdrops')" tabindex="0">
+      <span class="gs-result-tag" style="background:rgba(168,85,247,.15);color:#a855f7">AIRDROP</span>
+      <div style="flex:1;min-width:0">
+        <div class="gs-result-name">${a.name || a.project}</div>
+        <div class="gs-result-sub">${a.chain || ''} · ${a.status || ''}</div>
+      </div>
+    </div>`).join(''));
+  }
+
+  // Quick actions
+  const actions = [
+    { label: 'Yield Estavel com USDC', sub: 'Estrategias → Yield Estavel', action: "showTab('strat');setTimeout(()=>{selectObj('stable')},100)" },
+    { label: 'DCA Compra', sub: 'Estrategias → DCA Compra', action: "showTab('strat');setTimeout(()=>{selectObj('dca_buy')},100)" },
+    { label: 'Adicionar carteira', sub: 'Aba Carteira', action: "showTab('wallet');setTimeout(openWalletModal,200)" },
+    { label: 'Ver Hyperliquid', sub: 'Aba Hyperliquid', action: "showTab('hl')" },
+    { label: 'Emprestimos / Lending', sub: 'Aba Emprestimos', action: "showTab('loans')" },
+  ].filter(a => a.label.toUpperCase().includes(qUp) || a.sub.toUpperCase().includes(qUp)).slice(0, 3);
+
+  if (actions.length) {
+    results.push('<div class="gs-section-label">Acoes rapidas</div>');
+    results.push(actions.map(a => `<div class="gs-result-item" onclick="${a.action}" tabindex="0" onkeydown="if(event.key==='Enter')this.click()">
+      <span class="gs-result-tag" style="background:rgba(59,158,255,.15);color:var(--cyan)">ACAO</span>
+      <div style="flex:1;min-width:0">
+        <div class="gs-result-name">${a.label}</div>
+        <div class="gs-result-sub">${a.sub}</div>
+      </div>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.4"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join(''));
+  }
+
+  if (!results.length) {
+    res.innerHTML = '<div class="gs-empty">Nenhum resultado para "' + q + '"</div>';
+  } else {
+    res.innerHTML = results.join('');
+  }
+  res.style.display = '';
+}
+
+function goToPool(symbol, project) {
+  const res = document.getElementById('globalSearchResults');
+  if (res) res.style.display = 'none';
+  const inp = document.getElementById('globalSearchInput');
+  if (inp) inp.value = '';
+  // Go to yield tab and filter
+  showTab('yield');
+  setTimeout(() => {
+    const searchInput = document.querySelector('#tabYield input[type=text], .search-bar input');
+    if (searchInput) {
+      searchInput.value = symbol.split('/')[0].split('-')[0];
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  }, 150);
+}
+
+function selectObj(key) {
+  if (typeof _currentObj !== 'undefined') {
+    window._currentObj = key;
+    document.querySelectorAll('.strat-obj-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.obj === key);
+    });
+    if (typeof renderStratResults === 'function') renderStratResults();
+  }
+}
 
 </script>
 <div id="walletBanner" style="display:none"></div>
