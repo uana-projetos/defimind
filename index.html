@@ -2381,7 +2381,7 @@ document.getElementById('topToggle').addEventListener('change', renderSections);
 // keydown Escape consolidado abaixo (junto com closeWhatsNew)
 
 // === AUTO-REFRESH via DefiLlama API (a cada 6h) ===
-const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
+const REFRESH_INTERVAL = 30 * 60 * 1000; // 6 horas
 const PROTOCOLS_FILTER = ['uniswap','orca','meteora','raydium','kamino','project-x','camelot','gmtrade','omnipair'];
 const STABLECOINS_SET = new Set(['USDC','USDT','DAI','USD1','BUSD','FRAX','XSGD','BRZ','BRLA','PYUSD','USDCE','USDB','LUSD','TUSD','FDUSD','USD₮0','USDH']);
 const ETH_SET = new Set(['WETH','ETH','STETH','WSTETH','CBETH','RETH','WEETH','UETH']);
