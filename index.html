@@ -555,6 +555,69 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 .hl-summary-card .sc-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem}
 .hl-summary-card .sc-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
 .hl-loading{padding:1.5rem;text-align:center;color:var(--muted);font-size:.8rem}
+
+/* ═══ WALLET UPGRADE ═══ */
+.wup-section{margin-top:1.2rem}
+.wup-label{font-size:.7rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem}
+.wup-label svg{opacity:.7}
+/* Position cards */
+.pos-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.6rem .85rem;margin-bottom:.45rem;display:flex;align-items:center;gap:.75rem}
+.pos-card-left{flex:1;min-width:0}
+.pos-card-right{text-align:right;white-space:nowrap}
+.pos-tag{display:inline-flex;align-items:center;gap:.2rem;font-size:.6rem;font-weight:700;letter-spacing:.05em;padding:2px 6px;border-radius:4px;margin-bottom:.2rem}
+.pos-tag.perp{background:rgba(59,158,255,.15);color:var(--cyan)}
+.pos-tag.yield{background:rgba(74,222,128,.15);color:var(--green)}
+.pos-tag.lending{background:rgba(251,191,36,.15);color:#fbbf24}
+.pos-tag.spot{background:rgba(168,85,247,.15);color:#a855f7}
+.pos-card-name{font-size:.82rem;font-weight:600;color:var(--text)}
+.pos-card-sub{font-size:.68rem;color:var(--muted);margin-top:.1rem}
+.pos-pnl-pos{color:var(--green);font-size:.85rem;font-weight:700}
+.pos-pnl-neg{color:var(--red);font-size:.85rem;font-weight:700}
+.pos-apy{color:var(--cyan);font-size:.85rem;font-weight:700}
+.pos-empty{text-align:center;padding:.8rem;color:var(--muted);font-size:.75rem;border:1px dashed rgba(255,255,255,.1);border-radius:8px}
+.pos-fetch-btn{font-size:.68rem;padding:3px 8px;border-radius:5px;border:1px solid rgba(59,158,255,.35);background:rgba(59,158,255,.07);color:var(--cyan);cursor:pointer;margin-left:.5rem;transition:all .2s}
+.pos-fetch-btn:hover{background:rgba(59,158,255,.15)}
+/* Assets input */
+.asset-input-wrap{display:flex;gap:.4rem;margin-bottom:.5rem;flex-wrap:wrap}
+.asset-chip{display:inline-flex;align-items:center;gap:.35rem;background:rgba(59,158,255,.1);border:1px solid rgba(59,158,255,.3);border-radius:20px;padding:3px 10px;font-size:.73rem;color:var(--text)}
+.asset-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;line-height:1;padding:0 2px}
+.asset-chip button:hover{color:var(--red)}
+.asset-add-form{display:flex;gap:.35rem;align-items:center;margin-top:.4rem;flex-wrap:wrap}
+.asset-add-form input{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.75rem;padding:5px 8px;width:70px;outline:none}
+.asset-add-form input:focus{border-color:var(--cyan)}
+.asset-add-form input.wide{width:100px}
+/* Strategy suggestions */
+.strat-suggest-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.65rem .9rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.7rem;cursor:pointer;transition:border-color .2s}
+.strat-suggest-card:hover{border-color:rgba(59,158,255,.4)}
+.strat-suggest-icon{font-size:1.1rem;flex-shrink:0}
+.strat-suggest-body{flex:1;min-width:0}
+.strat-suggest-name{font-size:.8rem;font-weight:600;color:var(--text)}
+.strat-suggest-meta{font-size:.67rem;color:var(--muted);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strat-suggest-apy{font-size:.88rem;font-weight:700;color:var(--green);white-space:nowrap}
+.strat-suggest-badge{font-size:.58rem;padding:2px 6px;border-radius:4px;margin-left:.4rem;font-weight:700}
+.badge-safe{background:rgba(74,222,128,.15);color:var(--green)}
+.badge-mid{background:rgba(251,191,36,.15);color:#fbbf24}
+.badge-risk{background:rgba(239,68,68,.15);color:var(--red)}
+/* Risk monitor */
+.risk-row{display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.risk-row:last-child{border-bottom:none}
+.risk-label{font-size:.73rem;color:var(--muted)}
+.risk-val{font-size:.75rem;font-weight:600}
+/* Open positions manual tracker */
+.mpos-card{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;margin-bottom:.4rem;position:relative}
+.mpos-card-top{display:flex;justify-content:space-between;align-items:flex-start}
+.mpos-card-name{font-size:.8rem;font-weight:600}
+.mpos-card-meta{font-size:.67rem;color:var(--muted);margin-top:.15rem}
+.mpos-card-apy{font-size:.85rem;font-weight:700;color:var(--cyan)}
+.mpos-del{position:absolute;top:.5rem;right:.6rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;opacity:.5}
+.mpos-del:hover{color:var(--red);opacity:1}
+@media(max-width:480px){
+  .pos-card{flex-direction:column;align-items:flex-start;gap:.35rem}
+  .pos-card-right{text-align:left}
+  .strat-suggest-card{flex-wrap:wrap}
+  .asset-add-form{flex-direction:column;align-items:flex-start}
+  .asset-add-form input{width:100%;box-sizing:border-box}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -774,17 +837,109 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
 <div id="tabWallet" class="tab-section" style="display:none">
   <div class="wallet-tab-header">
     <div class="wallet-tab-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 12h2"/><circle cx="17" cy="12" r="1"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
       Minhas Carteiras
     </div>
-    <button onclick="openWalletModal()" style="background:none;border:1px solid rgba(59,158,255,.4);border-radius:6px;color:var(--cyan);font-size:.72rem;padding:5px 10px;cursor:pointer">+ Adicionar</button>
+    <button onclick="openWalletModal()" style="background:none;border:1px solid rgba(59,158,255,.4);border-radius:6px;color:var(--cyan);font-size:.72rem;padding:4px 10px;cursor:pointer">+ Adicionar</button>
   </div>
+
+  <!-- Wallet cards -->
   <div class="wallet-section">
     <div class="wallet-section-label">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Carteiras monitoradas (read-only)
     </div>
     <div id="walletBannerMain"></div>
+  </div>
+
+  <!-- Posicoes abertas -->
+  <div class="wup-section" id="wupPositions">
+    <div class="wup-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      Posicoes Abertas
+      <button class="pos-fetch-btn" onclick="fetchAllPositions()">Atualizar</button>
+    </div>
+    <div id="wupPositionsGrid">
+      <div class="pos-empty">Clique em Atualizar para buscar posicoes abertas das carteiras</div>
+    </div>
+  </div>
+
+  <!-- Meus ativos -->
+  <div class="wup-section">
+    <div class="wup-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Meus Ativos (para sugestoes personalizadas)
+    </div>
+    <div id="myAssetsChips"></div>
+    <div class="asset-add-form">
+      <input type="text" id="assetSymInput" class="wide" placeholder="Token (ex: ETH)">
+      <input type="number" id="assetAmtInput" placeholder="Qtd" min="0" step="any">
+      <button class="btn" onclick="addMyAsset()" style="padding:5px 12px;font-size:.72rem">+ Adicionar</button>
+    </div>
+  </div>
+
+  <!-- Posicoes manuais abertas -->
+  <div class="wup-section">
+    <div class="wup-label" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:.35rem">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        Posicoes Manuais (Yield / Lending / Pool)
+      </span>
+      <button class="pos-fetch-btn" onclick="openAddPositionModal()">+ Registrar</button>
+    </div>
+    <div id="manualPositionsGrid">
+      <div class="pos-empty">Nenhuma posicao registrada ainda</div>
+    </div>
+  </div>
+
+  <!-- Estrategias sugeridas -->
+  <div class="wup-section">
+    <div class="wup-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Estrategias Sugeridas para Voce
+    </div>
+    <div id="wupSuggestions">
+      <div class="pos-empty">Adicione ativos acima para ver sugestoes personalizadas</div>
+    </div>
+  </div>
+
+  <!-- Monitor de risco -->
+  <div class="wup-section">
+    <div class="wup-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Monitor de Risco
+    </div>
+    <div id="wupRiskMonitor" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem">
+      <div class="risk-row"><span class="risk-label">Posicoes abertas</span><span class="risk-val" id="riskOpenCount">0</span></div>
+      <div class="risk-row"><span class="risk-label">Yield medio (posicoes manuais)</span><span class="risk-val" id="riskAvgApy" style="color:var(--green)">-</span></div>
+      <div class="risk-row"><span class="risk-label">Melhor oportunidade disponivel</span><span class="risk-val" id="riskBestPool" style="color:var(--cyan)">-</span></div>
+      <div class="risk-row"><span class="risk-label">Ativos sem yield</span><span class="risk-val" id="riskIdleAssets" style="color:#fbbf24">-</span></div>
+    </div>
+  </div>
+
+  <!-- Modal: registrar posicao manual -->
+  <div id="addPosModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;width:340px;max-width:95vw">
+      <div style="font-size:.9rem;font-weight:700;margin-bottom:.9rem">Registrar Posicao</div>
+      <div class="form-row" style="flex-direction:column;gap:.5rem">
+        <select id="posType" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem">
+          <option value="yield">Yield Farming</option>
+          <option value="pool">Liquidity Pool</option>
+          <option value="lending">Lending (emprestimo)</option>
+          <option value="perp">Perp / Futures</option>
+          <option value="spot">Spot Holding</option>
+        </select>
+        <input id="posProtocol" type="text" placeholder="Protocolo (ex: Aave, Uniswap)" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem;outline:none">
+        <input id="posAsset" type="text" placeholder="Ativo / Par (ex: ETH-USDC)" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem;outline:none">
+        <input id="posValue" type="number" placeholder="Valor em USD" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem;outline:none">
+        <input id="posApy" type="number" placeholder="APY % atual" step="0.01" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem;outline:none">
+        <input id="posChain" type="text" placeholder="Chain (ex: Ethereum, Arbitrum)" style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:.78rem;outline:none">
+        <div style="display:flex;gap:.5rem;margin-top:.3rem">
+          <button onclick="saveManualPosition()" style="flex:1;background:var(--cyan);color:#000;border:none;border-radius:6px;padding:7px;font-size:.78rem;font-weight:700;cursor:pointer">Salvar</button>
+          <button onclick="closeAddPositionModal()" style="flex:1;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:7px;font-size:.78rem;cursor:pointer">Cancelar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7049,6 +7204,333 @@ async function refreshHLAll() {
 setInterval(() => {
   if (window._hlLoaded) refreshHLAll();
 }, 5 * 60 * 1000);
+
+// ═══ WALLET UPGRADE JS ═══
+
+function getMyAssets() { try { return JSON.parse(localStorage.getItem('defiMyAssets') || '[]'); } catch { return []; } }
+function saveMyAssets(a) { localStorage.setItem('defiMyAssets', JSON.stringify(a)); }
+function getManualPositions() { try { return JSON.parse(localStorage.getItem('defiManualPos') || '[]'); } catch { return []; } }
+function saveManualPositions(p) { localStorage.setItem('defiManualPos', JSON.stringify(p)); }
+
+function renderMyAssetsChips() {
+  const chips = document.getElementById('myAssetsChips');
+  if (!chips) return;
+  const assets = getMyAssets();
+  if (!assets.length) { chips.innerHTML = '<span style="font-size:.7rem;color:var(--muted)">Nenhum ativo adicionado</span>'; return; }
+  chips.innerHTML = assets.map((a, i) => `<span class="asset-chip">${a.symbol} <span style="opacity:.7">${a.amount > 0 ? a.amount : ''}</span><button onclick="removeMyAsset(${i})" title="Remover">x</button></span>`).join(' ');
+}
+
+function addMyAsset() {
+  const sym = (document.getElementById('assetSymInput')?.value || '').trim().toUpperCase();
+  const amt = parseFloat(document.getElementById('assetAmtInput')?.value || 0) || 0;
+  if (!sym) return;
+  const assets = getMyAssets();
+  const existing = assets.findIndex(a => a.symbol === sym);
+  if (existing >= 0) assets[existing].amount = amt;
+  else assets.push({ symbol: sym, amount: amt });
+  saveMyAssets(assets);
+  if (document.getElementById('assetSymInput')) document.getElementById('assetSymInput').value = '';
+  if (document.getElementById('assetAmtInput')) document.getElementById('assetAmtInput').value = '';
+  renderMyAssetsChips();
+  renderStrategySuggestions();
+  updateRiskMonitor();
+}
+
+function removeMyAsset(i) {
+  const assets = getMyAssets();
+  assets.splice(i, 1);
+  saveMyAssets(assets);
+  renderMyAssetsChips();
+  renderStrategySuggestions();
+  updateRiskMonitor();
+}
+
+// ── HL position fetch ──
+async function fetchHLPositions(addr) {
+  try {
+    const [perpRes, spotRes] = await Promise.all([
+      fetch('https://api.hyperliquid.xyz/info', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type:'clearinghouseState', user: addr}) }),
+      fetch('https://api.hyperliquid.xyz/info', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type:'spotClearinghouseState', user: addr}) })
+    ]);
+    const perp = await perpRes.json();
+    const spot = await spotRes.json();
+    return { perp, spot };
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchAllPositions() {
+  const grid = document.getElementById('wupPositionsGrid');
+  if (!grid) return;
+  const wallets = getWallets();
+  if (!wallets.length) { grid.innerHTML = '<div class="pos-empty">Adicione uma carteira primeiro</div>'; return; }
+  grid.innerHTML = '<div class="pos-empty">Buscando posicoes...</div>';
+
+  const cards = [];
+  for (const w of wallets) {
+    const label = w.label || (w.type === 'evm' ? 'EVM' : 'SOL');
+    // Try HL fetch for EVM wallets
+    if (w.type === 'evm') {
+      const data = await fetchHLPositions(w.addr);
+      if (data?.perp?.assetPositions?.length) {
+        for (const pos of data.perp.assetPositions) {
+          const p = pos.position;
+          if (!p || parseFloat(p.szi) === 0) continue;
+          const side = parseFloat(p.szi) > 0 ? 'LONG' : 'SHORT';
+          const pnl = parseFloat(p.unrealizedPnl || 0);
+          const pnlStr = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
+          const pnlClass = pnl >= 0 ? 'pos-pnl-pos' : 'pos-pnl-neg';
+          cards.push(`<div class="pos-card">
+            <div class="pos-card-left">
+              <div><span class="pos-tag perp">PERP</span><span style="font-size:.6rem;color:var(--muted);margin-left:.3rem">${label}</span></div>
+              <div class="pos-card-name">${p.coin} <span style="color:${side==='LONG'?'var(--green)':'var(--red)'}; font-size:.72rem">${side}</span></div>
+              <div class="pos-card-sub">Tamanho: ${Math.abs(parseFloat(p.szi)).toFixed(4)} | Entrada: $${parseFloat(p.entryPx||0).toFixed(2)} | Liq: $${parseFloat(p.liquidationPx||0).toFixed(2)}</div>
+            </div>
+            <div class="pos-card-right"><div class="${pnlClass}">PnL: $${pnlStr}</div></div>
+          </div>`);
+        }
+      }
+      // Spot balances from HL
+      if (data?.spot?.balances?.length) {
+        for (const b of data.spot.balances) {
+          const amt = parseFloat(b.total || 0);
+          if (amt < 0.001) continue;
+          cards.push(`<div class="pos-card">
+            <div class="pos-card-left">
+              <div><span class="pos-tag spot">SPOT</span><span style="font-size:.6rem;color:var(--muted);margin-left:.3rem">Hyperliquid</span></div>
+              <div class="pos-card-name">${b.coin}</div>
+              <div class="pos-card-sub">Saldo: ${amt.toFixed(4)}</div>
+            </div>
+          </div>`);
+        }
+      }
+      if (data && !data.perp?.assetPositions?.length && !data.spot?.balances?.filter(b=>parseFloat(b.total)>0.001).length) {
+        cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">Hyperliquid (${label}): sem posicoes abertas</div>`);
+      }
+      if (!data) {
+        cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">${label}: erro ao buscar HL</div>`);
+      }
+    } else {
+      cards.push(`<div class="pos-empty" style="margin-bottom:.4rem">${label} (Solana): scan automatico nao disponivel — use <a href="https://portfolio.llama.fi/${w.addr}" target="_blank" style="color:var(--cyan)">DefiLlama Portfolio</a></div>`);
+    }
+  }
+
+  grid.innerHTML = cards.length ? cards.join('') : '<div class="pos-empty">Nenhuma posicao ativa encontrada</div>';
+  updateRiskMonitor();
+}
+
+// ── Manual positions ──
+function renderManualPositions() {
+  const grid = document.getElementById('manualPositionsGrid');
+  if (!grid) return;
+  const positions = getManualPositions();
+  if (!positions.length) { grid.innerHTML = '<div class="pos-empty">Nenhuma posicao registrada. Clique em "+ Registrar" para comecar.</div>'; return; }
+
+  const typeIcon = { yield:'💰', pool:'🌊', lending:'🏦', perp:'📈', spot:'💎' };
+  const typeLabel = { yield:'Yield', pool:'Pool LP', lending:'Lending', perp:'Perp', spot:'Spot' };
+  const typeClass = { yield:'yield', pool:'yield', lending:'lending', perp:'perp', spot:'spot' };
+
+  grid.innerHTML = positions.map((p, i) => `<div class="mpos-card">
+    <button class="mpos-del" onclick="deleteManualPosition(${i})" title="Remover">x</button>
+    <div class="mpos-card-top">
+      <div>
+        <div><span class="pos-tag ${typeClass[p.type]||'yield'}">${typeLabel[p.type]||p.type}</span> <span style="font-size:.72rem;color:var(--text);font-weight:600">${p.asset}</span></div>
+        <div class="mpos-card-meta">${p.protocol} · ${p.chain||''} ${p.value ? '· $' + parseFloat(p.value).toLocaleString() : ''}</div>
+      </div>
+      <div class="mpos-card-apy">${p.apy ? p.apy + '% APY' : ''}</div>
+    </div>
+  </div>`).join('');
+}
+
+function openAddPositionModal() {
+  const m = document.getElementById('addPosModal');
+  if (m) m.style.display = 'flex';
+}
+function closeAddPositionModal() {
+  const m = document.getElementById('addPosModal');
+  if (m) m.style.display = 'none';
+}
+function saveManualPosition() {
+  const pos = {
+    type: document.getElementById('posType')?.value || 'yield',
+    protocol: document.getElementById('posProtocol')?.value || '',
+    asset: document.getElementById('posAsset')?.value || '',
+    value: document.getElementById('posValue')?.value || '',
+    apy: document.getElementById('posApy')?.value || '',
+    chain: document.getElementById('posChain')?.value || '',
+    ts: Date.now()
+  };
+  if (!pos.asset && !pos.protocol) return;
+  const positions = getManualPositions();
+  positions.unshift(pos);
+  saveManualPositions(positions);
+  closeAddPositionModal();
+  // Clear fields
+  ['posProtocol','posAsset','posValue','posApy','posChain'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  renderManualPositions();
+  updateRiskMonitor();
+  renderStrategySuggestions();
+}
+function deleteManualPosition(i) {
+  const positions = getManualPositions();
+  positions.splice(i, 1);
+  saveManualPositions(positions);
+  renderManualPositions();
+  updateRiskMonitor();
+}
+
+// ── Strategy suggestions ──
+function renderStrategySuggestions() {
+  const el = document.getElementById('wupSuggestions');
+  if (!el) return;
+  const assets = getMyAssets();
+  const manualPos = getManualPositions();
+  const pools = window._allPools || [];
+
+  if (!assets.length && !manualPos.length) {
+    el.innerHTML = '<div class="pos-empty">Adicione seus ativos acima para ver oportunidades personalizadas</div>';
+    return;
+  }
+
+  // Collect all known symbols from assets + manual positions
+  const mySymbols = new Set([
+    ...assets.map(a => a.symbol.toUpperCase()),
+    ...manualPos.map(p => p.asset.toUpperCase().split('-')[0])
+  ]);
+
+  // Stable/safe: USDC, USDT, DAI, FRAX — always suggest
+  const stables = new Set(['USDC','USDT','DAI','FRAX','USDE','PYUSD','GHO','CRVUSD']);
+  const hasStable = [...mySymbols].some(s => stables.has(s));
+
+  // Score pools by relevance + APY
+  const scored = pools.filter(p => {
+    if (!p.apy || p.apy > 9000) return false;
+    const sym = (p.symbol || '').toUpperCase();
+    // Match if any of my assets appear in pool symbol
+    for (const s of mySymbols) {
+      if (sym.includes(s)) return true;
+    }
+    // Include stable pools if user holds stables
+    if (hasStable && (sym.includes('USDC') || sym.includes('USDT') || sym.includes('DAI'))) return true;
+    return false;
+  }).map(p => {
+    let score = p.apy;
+    // Prefer lower risk: single asset > LP
+    if (!p.symbol.includes('-') && !p.symbol.includes('/')) score += 5;
+    // Chain bonus: mainnet
+    if (p.chain === 'Ethereum') score += 2;
+    if (p.chain === 'Arbitrum') score += 1.5;
+    // IL risk
+    const hasIl = p.symbol.includes('-') || p.symbol.includes('/');
+    return { ...p, score, hasIl };
+  }).sort((a,b) => b.score - a.score).slice(0, 8);
+
+  // Add HL funding rate suggestions
+  const hlSuggestions = [];
+  if (window._hlFundingData) {
+    const top = window._hlFundingData
+      .filter(d => d.frApy && Math.abs(d.frApy) > 10)
+      .sort((a,b) => Math.abs(b.frApy) - Math.abs(a.frApy))
+      .slice(0, 2);
+    top.forEach(d => {
+      hlSuggestions.push({
+        _isHL: true,
+        project: 'Hyperliquid',
+        chain: 'Hyperliquid',
+        symbol: d.name,
+        apy: Math.abs(d.frApy),
+        frSide: d.frApy > 0 ? 'SHORT' : 'LONG',
+        hasIl: false
+      });
+    });
+  }
+
+  const all = [...hlSuggestions, ...scored].slice(0, 8);
+
+  if (!all.length) {
+    el.innerHTML = '<div class="pos-empty">Nenhuma oportunidade encontrada para seus ativos. Tente adicionar USDC ou ETH.</div>';
+    return;
+  }
+
+  const risk = p => {
+    if (p._isHL) return '<span class="strat-suggest-badge badge-mid">Funding</span>';
+    if (p.hasIl) return '<span class="strat-suggest-badge badge-mid">IL risk</span>';
+    if (p.apy > 50) return '<span class="strat-suggest-badge badge-risk">Alto risco</span>';
+    return '<span class="strat-suggest-badge badge-safe">Seguro</span>';
+  };
+
+  const icon = p => {
+    if (p._isHL) return '⚡';
+    if (p.hasIl) return '🌊';
+    if (p.apy > 30) return '🔥';
+    return '💰';
+  };
+
+  el.innerHTML = all.map(p => `<div class="strat-suggest-card" onclick="showTab('pools')">
+    <div class="strat-suggest-icon">${icon(p)}</div>
+    <div class="strat-suggest-body">
+      <div class="strat-suggest-name">${p.symbol} ${risk(p)}</div>
+      <div class="strat-suggest-meta">${p.project} · ${p.chain}${p._isHL ? ' · Lado: ' + p.frSide : ''}</div>
+    </div>
+    <div class="strat-suggest-apy">${p.apy.toFixed(1)}%</div>
+  </div>`).join('');
+}
+
+// ── Risk monitor ──
+function updateRiskMonitor() {
+  const manual = getManualPositions();
+  const assets = getMyAssets();
+  const pools = window._allPools || [];
+
+  const openCount = document.getElementById('riskOpenCount');
+  if (openCount) openCount.textContent = manual.length + ' posicoes';
+
+  const avgApy = document.getElementById('riskAvgApy');
+  if (avgApy) {
+    const withApy = manual.filter(p => p.apy);
+    if (withApy.length) {
+      const avg = withApy.reduce((s,p) => s + parseFloat(p.apy), 0) / withApy.length;
+      avgApy.textContent = avg.toFixed(1) + '%';
+    } else {
+      avgApy.textContent = '-';
+    }
+  }
+
+  const bestPool = document.getElementById('riskBestPool');
+  if (bestPool && pools.length) {
+    const best = pools.filter(p => p.apy < 9000).sort((a,b) => b.apy - a.apy)[0];
+    if (best) bestPool.textContent = best.symbol + ' ' + best.apy.toFixed(1) + '% (' + best.project + ')';
+  }
+
+  const idle = document.getElementById('riskIdleAssets');
+  if (idle) {
+    const posAssets = new Set(manual.map(p => p.asset.toUpperCase().split('-')[0]));
+    const idleList = assets.filter(a => !posAssets.has(a.symbol));
+    idle.textContent = idleList.length ? idleList.map(a => a.symbol).join(', ') : 'Nenhum';
+  }
+}
+
+// ── Init on wallet tab open ──
+const _origShowTab = showTab;
+showTab = function(tab) {
+  _origShowTab(tab);
+  if (tab === 'wallet') {
+    renderMyAssetsChips();
+    renderManualPositions();
+    renderStrategySuggestions();
+    updateRiskMonitor();
+  }
+};
+
+// ── Expose HL funding data for suggestions ──
+window.addEventListener('hlFundingReady', function(e) {
+  window._hlFundingData = e.detail;
+  if (document.getElementById('tabWallet')?.style?.display !== 'none') {
+    renderStrategySuggestions();
+  }
+});
+
 </script>
 <div id="walletBanner" style="display:none"></div>
 </body>
