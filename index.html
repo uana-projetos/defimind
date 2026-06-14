@@ -701,8 +701,62 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
   .welcome-title{font-size:1rem}
   #globalSearchResults{left:.5rem;right:.5rem}
 }
+
+/* ═══ VIRAL FEATURES ═══ */
+/* Share card */
+.share-card-wrap{background:linear-gradient(135deg,#0a0e1a,#0d1525);border:1px solid rgba(59,158,255,.25);border-radius:16px;padding:1.4rem 1.6rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.share-card-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,158,255,.06),rgba(168,85,247,.04));pointer-events:none}
+.share-card-logo{font-size:.72rem;font-weight:800;color:var(--cyan);letter-spacing:.05em;margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem}
+.share-card-total{font-size:2rem;font-weight:900;color:var(--text);line-height:1;margin-bottom:.25rem}
+.share-card-sub{font-size:.72rem;color:var(--muted);margin-bottom:1rem}
+.share-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1rem}
+.share-stat{background:rgba(255,255,255,.04);border-radius:8px;padding:.5rem .6rem}
+.share-stat-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.15rem}
+.share-stat-val{font-size:.9rem;font-weight:700}
+.share-card-footer{font-size:.6rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.share-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem}
+.share-btn{display:inline-flex;align-items:center;gap:.4rem;padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.share-btn-x{background:#000;color:#fff;border:1px solid rgba(255,255,255,.15)}
+.share-btn-x:hover{background:#111}
+.share-btn-copy{background:rgba(59,158,255,.15);color:var(--cyan);border:1px solid rgba(59,158,255,.3)}
+.share-btn-copy:hover{background:rgba(59,158,255,.25)}
+.share-btn-tg{background:rgba(0,136,204,.15);color:#08c;border:1px solid rgba(0,136,204,.3)}
+.share-btn-tg:hover{background:rgba(0,136,204,.25)}
+
+/* HL Leaderboard */
+.hl-lb-card{display:flex;align-items:center;gap:.75rem;padding:.55rem .8rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:.35rem;transition:border-color .2s}
+.hl-lb-card:hover{border-color:rgba(244,114,182,.3)}
+.hl-lb-rank{font-size:.75rem;font-weight:800;color:var(--muted);min-width:22px;text-align:center}
+.hl-lb-rank.gold{color:#fbbf24}
+.hl-lb-rank.silver{color:#94a3b8}
+.hl-lb-rank.bronze{color:#c2814b}
+.hl-lb-addr{font-size:.72rem;color:var(--text);font-family:monospace;flex:1}
+.hl-lb-pnl{font-size:.82rem;font-weight:700;white-space:nowrap}
+.hl-lb-vol{font-size:.65rem;color:var(--muted);white-space:nowrap}
+
+/* Viral CTA strip */
+.viral-strip{background:linear-gradient(135deg,rgba(244,114,182,.08),rgba(59,158,255,.06));border:1px solid rgba(244,114,182,.2);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.viral-strip-text{font-size:.75rem;color:var(--text);line-height:1.4}
+.viral-strip-text strong{color:var(--hype);display:block;font-size:.72rem;margin-bottom:.1rem}
+.viral-strip-btn{display:inline-flex;align-items:center;gap:.3rem;padding:6px 14px;background:var(--hype);color:#000;border:none;border-radius:8px;font-size:.72rem;font-weight:800;cursor:pointer;white-space:nowrap;text-decoration:none;transition:opacity .2s}
+.viral-strip-btn:hover{opacity:.85}
+
+/* Float share button */
+#floatShareBtn{position:fixed;bottom:1.2rem;left:1.2rem;background:linear-gradient(135deg,var(--cyan),#a855f7);color:#000;border:none;border-radius:50px;padding:.55rem 1rem;font-size:.75rem;font-weight:800;cursor:pointer;z-index:90;display:flex;align-items:center;gap:.35rem;box-shadow:0 4px 20px rgba(59,158,255,.3);transition:all .2s}
+#floatShareBtn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(59,158,255,.45)}
+#floatShareBtn svg{width:13px;height:13px}
+
+@media(max-width:480px){
+  .share-card-stats{grid-template-columns:1fr 1fr}
+  .share-card-total{font-size:1.5rem}
+  #floatShareBtn{bottom:.8rem;left:.8rem;font-size:.7rem;padding:.45rem .8rem}
+  .viral-strip{flex-direction:column;align-items:flex-start}
+  .hl-lb-vol{display:none}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <!-- Analytics: GoatCounter (free, no cookies) -->
+  <script data-goatcounter="https://defimind.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -1121,6 +1175,31 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;back
     </button>
   </div>
 
+
+  <!-- HL Viral Strip -->
+  <div class="viral-strip" style="margin-top:.3rem">
+    <div class="viral-strip-text">
+      <strong>Ganhe no trading com zero taxas de abertura</strong>
+      Registre-se na Hyperliquid pelo link exclusivo DefiMind e comece a operar
+    </div>
+    <a class="viral-strip-btn" href="https://app.hyperliquid.xyz/join/UANA" target="_blank" rel="noopener">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Entrar na HL
+    </a>
+  </div>
+
+  <!-- HL Leaderboard -->
+  <div class="hl-section-card" style="margin-bottom:1rem">
+    <div class="hl-section-header">
+      <span class="hl-section-icon">🏆</span>
+      <span class="hl-section-title">Leaderboard — Top Traders HL</span>
+      <span class="hl-badge">PnL 30 dias</span>
+      <button onclick="loadHLLeaderboard()" style="margin-left:auto;background:none;border:1px solid rgba(244,114,182,.3);border-radius:5px;color:var(--hype);font-size:.65rem;padding:3px 8px;cursor:pointer">Atualizar</button>
+    </div>
+    <div id="hl-leaderboard-grid" style="padding:.5rem">
+      <div style="text-align:center;padding:1rem;color:var(--muted);font-size:.75rem">Clique em Atualizar para ver o ranking</div>
+    </div>
+  </div>
   <!-- Cards de resumo -->
   <div id="hl-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;margin-bottom:1.25rem"></div>
 
@@ -8179,6 +8258,212 @@ function selectObj(key) {
   }
 }
 
+
+// ═══ VIRAL FEATURES JS ═══
+
+// ── Share Card ──
+function openShareCard() {
+  const modal = document.getElementById('shareModal');
+  const preview = document.getElementById('shareCardPreview');
+  const actions = document.getElementById('shareActions');
+  if (!modal || !preview) return;
+
+  // Gather data
+  const totalEl = document.getElementById('wupTotalUsd');
+  const totalUsd = totalEl ? totalEl.textContent : '$—';
+  const pnlEl = document.getElementById('wupTotalPnl');
+  const pnl = pnlEl ? pnlEl.textContent : '';
+  const wallets = getWallets();
+  const manualPos = getManualPositions();
+  const assets = getMyAssets();
+  const pools = window._allPools || [];
+
+  // Best yield from all pools
+  const bestPool = pools.filter(p=>p.apy && p.apy < 9000).sort((a,b)=>b.apy-a.apy)[0];
+  const bestApy = bestPool ? bestPool.apy.toFixed(1)+'%' : '—';
+  const bestPoolName = bestPool ? (bestPool.symbol + ' · ' + bestPool.project) : '—';
+
+  // Chains detected
+  const chainSet = new Set();
+  if (wallets.some(w=>w.type==='evm')) chainSet.add('Ethereum');
+  if (wallets.some(w=>w.type==='sol')) chainSet.add('Solana');
+  chainSet.add('Hyperliquid');
+  const chains = [...chainSet].join(' · ');
+
+  // Positions count
+  const posCount = manualPos.length;
+
+  preview.innerHTML = `<div class="share-card-wrap">
+    <div class="share-card-logo">
+      🧠 DefiMind <span style="opacity:.4;font-weight:400;margin-left:.3rem">defimind.xyz</span>
+    </div>
+    <div class="share-card-total">${totalUsd !== '$0' && totalUsd !== '$—' ? totalUsd : '—'}</div>
+    <div class="share-card-sub">Portfolio total${pnl ? ' · ' + pnl : ''}</div>
+    <div class="share-card-stats">
+      <div class="share-stat">
+        <div class="share-stat-label">Melhor APY</div>
+        <div class="share-stat-val" style="color:var(--green)">${bestApy}</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:.1rem">${bestPoolName.slice(0,22)}</div>
+      </div>
+      <div class="share-stat">
+        <div class="share-stat-label">Posicoes</div>
+        <div class="share-stat-val">${posCount || wallets.length || '—'}</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:.1rem">${posCount ? 'registradas' : 'carteiras'}</div>
+      </div>
+      <div class="share-stat">
+        <div class="share-stat-label">Ativos</div>
+        <div class="share-stat-val">${assets.length || '—'}</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:.1rem">${assets.length ? assets.slice(0,3).map(a=>a.symbol).join(', ') : 'monitorados'}</div>
+      </div>
+    </div>
+    <div class="share-card-footer">
+      <span>${chains}</span>
+      <span style="color:var(--cyan)">uana-projetos.github.io/defimind</span>
+    </div>
+  </div>`;
+
+  // Share text
+  const tweetText = encodeURIComponent(
+    `Monitorando meu portfolio DeFi em tempo real com @DefiMindBR 🧠\n\n` +
+    (totalUsd !== '$—' && totalUsd !== '$0' ? `Portfolio: ${totalUsd}\n` : '') +
+    `Melhor yield agora: ${bestApy} (${bestPoolName})\n\n` +
+    `Gratis, sem login, sem conectar carteira 👇\nhttps://uana-projetos.github.io/defimind/\n\n#DeFi #Crypto #Hyperliquid`
+  );
+
+  const tgText = encodeURIComponent(
+    `🧠 Monitorando DeFi em tempo real com o DefiMind\n` +
+    `Yields, pools, airdrops, carteira — tudo grátis\n` +
+    `https://uana-projetos.github.io/defimind/`
+  );
+
+  actions.innerHTML = `
+    <a href="https://x.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener" class="share-btn share-btn-x">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Postar no X
+    </a>
+    <a href="https://t.me/share/url?url=https://uana-projetos.github.io/defimind/&text=${tgText}" target="_blank" rel="noopener" class="share-btn share-btn-tg">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.05 9.657c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.913.564z"/></svg>
+      Telegram
+    </a>
+    <button onclick="copyShareLink()" class="share-btn share-btn-copy">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copiar link
+    </button>`;
+
+  modal.style.display = 'flex';
+
+  // Show wallet viral strip
+  const strip = document.getElementById('walletViralStrip');
+  if (strip) strip.style.display = '';
+}
+
+function closeShareModal() {
+  const modal = document.getElementById('shareModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function copyShareLink() {
+  navigator.clipboard?.writeText('https://uana-projetos.github.io/defimind/').then(() => {
+    const btn = document.querySelector('.share-btn-copy');
+    if (btn) { const t = btn.innerHTML; btn.innerHTML = '✅ Copiado!'; setTimeout(()=>btn.innerHTML=t, 2000); }
+  });
+}
+
+// Close share modal on overlay click
+document.getElementById('shareModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeShareModal();
+});
+
+// ── HL Leaderboard ──
+async function loadHLLeaderboard() {
+  const grid = document.getElementById('hl-leaderboard-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:.75rem"><span class="wup-spinner"></span> Carregando...</div>';
+
+  try {
+    const res = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({type:'leaderboard'})
+    });
+    const data = await res.json();
+    const entries = (data?.leaderboardRows || []).slice(0, 15);
+
+    if (!entries.length) {
+      grid.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:.75rem">Leaderboard nao disponivel no momento</div>';
+      return;
+    }
+
+    const medals = ['🥇','🥈','🥉'];
+    grid.innerHTML = entries.map((e, i) => {
+      const pnl = parseFloat(e.pnl || e.windowPnl || 0);
+      const pnlStr = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toLocaleString(undefined,{maximumFractionDigits:0});
+      const vol = parseFloat(e.vlm || e.volume || 0);
+      const volStr = vol >= 1e6 ? '$'+(vol/1e6).toFixed(1)+'M' : vol >= 1e3 ? '$'+(vol/1e3).toFixed(0)+'K' : '$'+vol.toFixed(0);
+      const addr = e.ethAddress || e.user || '';
+      const shortAddr = addr ? addr.slice(0,6)+'...'+addr.slice(-4) : '—';
+      const rankClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+
+      return `<div class="hl-lb-card">
+        <div class="hl-lb-rank ${rankClass}">${medals[i] || (i+1)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="hl-lb-addr">${shortAddr}</div>
+          ${e.accountValue ? `<div style="font-size:.6rem;color:var(--muted)">Portfolio: $${parseFloat(e.accountValue).toLocaleString(undefined,{maximumFractionDigits:0})}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="hl-lb-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnlStr}</div>
+          <div class="hl-lb-vol">Vol: ${volStr}</div>
+        </div>
+      </div>`;
+    }).join('') + `<div style="text-align:center;margin-top:.6rem">
+      <a href="https://app.hyperliquid.xyz/join/UANA" target="_blank" rel="noopener" class="viral-strip-btn" style="font-size:.7rem;display:inline-flex">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Quero entrar na Hyperliquid
+      </a>
+    </div>`;
+  } catch(e) {
+    grid.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--red);font-size:.75rem">Erro ao carregar leaderboard</div>';
+  }
+}
+
+// Show wallet share strip when portfolio loads
+const _origFetchAll = fetchAllPositions;
+fetchAllPositions = async function() {
+  await _origFetchAll();
+  const strip = document.getElementById('walletViralStrip');
+  const total = document.getElementById('wupPortfolioTotal');
+  if (strip && total && total.style.display !== 'none') strip.style.display = '';
+};
+
+// Track tab views for analytics
+const _origShowTabViral = showTab;
+showTab = function(tab) {
+  _origShowTabViral(tab);
+  // GoatCounter custom event
+  if (window.goatcounter?.count) {
+    window.goatcounter.count({path: '/tab/' + tab, title: 'Tab: ' + tab});
+  }
+};
+
 </script>
 <div id="walletBanner" style="display:none"></div>
+
+<!-- Float Share Button -->
+<button id="floatShareBtn" onclick="openShareCard()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  Compartilhar
+</button>
+
+<!-- Share Modal -->
+<div id="shareModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)">
+  <div style="background:var(--bg);border:1px solid rgba(59,158,255,.3);border-radius:16px;padding:1.4rem;max-width:420px;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <span style="font-size:.88rem;font-weight:800">Compartilhar DefiMind</span>
+      <button onclick="closeShareModal()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;line-height:1">x</button>
+    </div>
+    <div id="shareCardPreview"></div>
+    <div class="share-actions" id="shareActions"></div>
+  </div>
+</div>
+
 </body>
