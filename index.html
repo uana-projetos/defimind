@@ -21,6 +21,12 @@
 <meta name="author" content="Uaná Lee">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://uana-projetos.github.io/defimind/">
+<link rel="preconnect" href="https://yields.llama.fi" crossorigin>
+<link rel="preconnect" href="https://api.hyperliquid.xyz" crossorigin>
+<link rel="preconnect" href="https://api.coingecko.com" crossorigin>
+<link rel="dns-prefetch" href="https://api.llama.fi">
+<link rel="dns-prefetch" href="https://api.ethplorer.io">
+<link rel="dns-prefetch" href="https://raw.githubusercontent.com">
 
 <!-- ── Open Graph (Facebook, WhatsApp, Discord, Telegram) ── -->
 <meta property="og:type" content="website">
@@ -2126,9 +2132,7 @@ async function openLiveSearch(tab) {
     if (_llamaCache && now - _llamaCacheTime < 300000) {
       data = _llamaCache;
     } else {
-      const res  = await fetch('https://yields.llama.fi/pools');
-      const json = await res.json();
-      data = json.data || [];
+      data = await cmFetchAllPools();
       _llamaCache     = data;
       _llamaCacheTime = now;
     }
@@ -2262,6 +2266,13 @@ async function openLiveLoanSearch() {
 // ── Tab Navigation
 // ══════════════════════════════════════════════════════════
 function showTab(tab) {
+  // Estrategias precisa do catalogo completo — baixa sob demanda, 1x
+  if (tab === 'strat' && !(window._allPools && window._allPools.length) && !window._cmStratLoading) {
+    window._cmStratLoading = true;
+    refreshFromAPI().then(() => {
+      if (typeof renderStratResults === 'function') { try { renderStratResults(); } catch(e) {} }
+    }).finally(() => { window._cmStratLoading = false; });
+  }
   // Esconde todas as abas
   ['tabYield','tabPools','tabLoans','tabAirdrops','tabHl','tabStrat','tabWallet'].forEach(id => {
     const el = document.getElementById(id);
@@ -2598,12 +2609,20 @@ const SOL_SET = new Set(['SOL','WSOL','MSOL','JITOSOL','USOL']);
 const HYPE_SET = new Set(['WHYPE','HYPE','KHYPE','VHYPE','LHYPE']);
 const STOCK_SET = new Set(['NVDA','TSLA','AAPL','COIN','META','MSTR','AMZN','GOOGL','MSFT','SPY','QQQ','RIO','XAUT0','GME','AMD','NFLX','PLTR','INTC','GLDX','BABA']);
 
+async function cmFetchAllPools(maxAgeMs = 300000) {
+  const now = Date.now();
+  if (window._allPools && window._allPools.length && now - (window._allPoolsTime || 0) < maxAgeMs) return window._allPools;
+  if (window._cmPoolsPromise) return window._cmPoolsPromise;
+  window._cmPoolsPromise = fetch('https://yields.llama.fi/pools', { signal: AbortSignal.timeout(20000) })
+    .then(r => r.json())
+    .then(j => { window._allPools = j.data || []; window._allPoolsTime = Date.now(); return window._allPools; })
+    .finally(() => { window._cmPoolsPromise = null; });
+  return window._cmPoolsPromise;
+}
+
 async function refreshFromAPI() {
   try {
-    const res = await fetch('https://yields.llama.fi/pools', { signal: AbortSignal.timeout(15000) });
-    const json = await res.json();
-    const pools = json.data || [];
-  window._allPools = pools; // cache para Estratégias
+    const pools = await cmFetchAllPools();
     const newPools = {ETH:[],BTC:[],SOL:[],HYPE:[],STOCKS:[],INDEX:[],METALS:[],RWA:[],STABLE:[]};
 
     for (const p of pools) {
@@ -2661,8 +2680,10 @@ async function refreshFromAPI() {
         recordApySnapshot(newPools);
     renderSections();
     if (typeof renderSimulator === 'function') renderSimulator();
+    try { localStorage.setItem('cmPoolCache', JSON.stringify({ ts: Date.now(), pools: newPools })); } catch(e) {}
     const now = new Date().toLocaleString('pt-BR');
-    document.querySelector('.timestamp').textContent = `Atualizado: ${now} (auto) | Fonte: DefiLlama + Análise Técnica`;
+    const _tsEl = document.querySelector('.timestamp');
+    if (_tsEl) _tsEl.textContent = `Atualizado: ${now} (auto) | Fonte: DefiLlama + Análise Técnica`;
     window._lastPoolRefresh = now;
     console.log('[Auto-refresh] Pools atualizadas com sucesso.');
   } catch(e) {
@@ -2714,9 +2735,34 @@ function getApySparkline(cat,pool,W=60,H=18){
   const col=vals[vals.length-1]>=vals[0]?'#34d399':'#ef4444';
   return '<svg width="'+W+'" height="'+H+'" style="vertical-align:middle;margin-left:4px;flex-shrink:0"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
-// Refresh on load + interval
-setTimeout(refreshFromAPI, 3000);
-window._poolRefreshInterval = setInterval(refreshFromAPI, REFRESH_INTERVAL);
+// Refresh on load + interval — com cache SWR (evita 10MB da DefiLlama em toda visita)
+function cmApplyPoolCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('cmPoolCache') || 'null');
+    if (!c || !c.pools) return false;
+    Object.assign(POOLS, c.pools);
+    renderSections();
+    if (typeof renderSimulator === 'function') renderSimulator();
+    const dt = new Date(c.ts).toLocaleString('pt-BR');
+    const tsEl = document.querySelector('.timestamp');
+    if (tsEl) tsEl.textContent = `Atualizado: ${dt} | Fonte: DefiLlama (cache local)`;
+    window._lastPoolRefresh = dt;
+    return (Date.now() - c.ts) < REFRESH_INTERVAL;
+  } catch(e) { return false; }
+}
+function cmBootPools() {
+  if (cmApplyPoolCache()) {
+    console.log('[CriptoMind] pools servidas do cache local — download pesado evitado');
+  } else {
+    refreshFromAPI();
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', cmBootPools);
+} else {
+  cmBootPools();
+}
+window._poolRefreshInterval = setInterval(() => { if (!document.hidden) refreshFromAPI(); }, REFRESH_INTERVAL);
 
 // === PRICE UPDATE via CoinGecko (a cada 30min) ===
 const PRICE_INTERVAL = 30 * 60 * 1000;
@@ -2742,7 +2788,7 @@ async function refreshPrices() {
       if (typeof renderMyPools === 'function') renderMyPools();
       const ts = document.querySelector('.timestamp');
       const now = new Date().toLocaleString('pt-BR');
-      ts.textContent = `Preços: ${now} | Pools: a cada 6h | Fonte: DefiLlama + CoinGecko`;
+      if (ts) ts.textContent = `Preços: ${now} | Pools: a cada 6h | Fonte: DefiLlama + CoinGecko`;
       // Update sim timestamp too
       const simTs = document.getElementById('sim-timestamp');
       if (simTs) simTs.textContent = 'Preços: ' + now;
@@ -4148,7 +4194,7 @@ const _origRP = refreshPrices.bind({});
 // Patch price refresh to also update my pools
 const _baseRefreshPrices = refreshPrices;
 // Re-render my pools a cada 1min (intervalo unico)
-window._myPoolInterval = setInterval(renderMyPools, 60000);
+window._myPoolInterval = setInterval(() => { if (!document.hidden) renderMyPools(); }, 60000);
 
 // Initial notification request on first interaction
 document.addEventListener('click', function reqNotifOnce() {
@@ -5074,9 +5120,7 @@ async function renderLiveRates() {
     { name:'Compound', slug:'compound-v3', asset:'USDC', color:'#00d395' },
   ];
   try {
-    const r = await fetch('https://yields.llama.fi/pools');
-    const data = await r.json();
-    const pools = data.data || [];
+    const pools = await cmFetchAllPools();
     const results = PROTOCOLS.map(p => {
       const match = pools.find(x =>
         x.project && x.project.toLowerCase().includes(p.slug.toLowerCase()) &&
@@ -6552,9 +6596,9 @@ function togglePause() {
     if (window._myPoolInterval) clearInterval(window._myPoolInterval);
   } else {
     btn.textContent = '⏸ Pausar'; btn.classList.remove('paused');
-    window._poolRefreshInterval = setInterval(refreshFromAPI, REFRESH_INTERVAL);
+    window._poolRefreshInterval = setInterval(() => { if (!document.hidden) refreshFromAPI(); }, REFRESH_INTERVAL);
     window._priceRefreshInterval = setInterval(refreshPrices, PRICE_INTERVAL);
-    window._myPoolInterval = setInterval(renderMyPools, 60000);
+    window._myPoolInterval = setInterval(() => { if (!document.hidden) renderMyPools(); }, 60000);
   }
 }
 
@@ -6669,7 +6713,7 @@ async function renderHLCard() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(renderHLCard, 2000);
-  setInterval(renderHLCard, 5 * 60 * 1000);
+  setInterval(() => { if (!document.hidden) renderHLCard(); }, 5 * 60 * 1000);
 });
 
 // === SORT POOLS ===
@@ -7556,7 +7600,7 @@ async function refreshHLAll() {
 
 // Auto-refresh a cada 5min quando tab HL estiver ativa
 setInterval(() => {
-  if (window._hlLoaded) refreshHLAll();
+  if (!document.hidden && window._hlLoaded) refreshHLAll();
 }, 5 * 60 * 1000);
 
 // ═══ WALLET UPGRADE JS ═══
@@ -8084,6 +8128,7 @@ showTab = function(tab) {
     // Start auto-refresh every 30s
     if (window._wupRefreshTimer) clearInterval(window._wupRefreshTimer);
     window._wupRefreshTimer = setInterval(() => {
+      if (document.hidden) return;
       if (document.getElementById('tabWallet')?.style?.display !== 'none') {
         fetchAllPositions();
       } else {
@@ -8552,6 +8597,6 @@ async function cmLoadBotStats() {
   }
 }
 cmLoadBotStats();
-setInterval(cmLoadBotStats, 5 * 60 * 1000);
+setInterval(() => { if (!document.hidden) cmLoadBotStats(); }, 5 * 60 * 1000);
 </script>
 </body>
